@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>沃林学生管理系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <link rel="stylesheet" href="/frontend/styles.css">
+</head>
+<body>
+<div id="app">
+    <section v-if="!token" class="login-page">
+        <div class="login-visual">
+            <div class="visual-glass">
+                <p class="eyebrow">FastAPI Admin</p>
+                <h1>沃林学生管理系统</h1>
+                <p>统一管理学生档案、成绩跟踪、就业进展与班级数据</p>
+                <div class="visual-metrics">
+                    <span>学生档案</span>
+                    <span>成绩跟踪</span>
+                    <span>就业分析</span>
+                </div>
+            </div>
+        </div>
+        <el-card class="login-card" shadow="always">
+            <div class="login-header">
+                <div class="brand-mark">沃</div>
+                <div>
+                    <h2>登录工作台</h2>
+                    <p>请输入账号和密码进入管理后台</p>
+                </div>
+            </div>
+            <el-form :model="loginForm" label-position="top" @keyup.enter="login">
+                <el-form-item label="账号">
+                    <el-input v-model="loginForm.username" size="large" placeholder="请输入账号"></el-input>
+                </el-form-item>
+                <el-form-item label="密码">
+                    <el-input v-model="loginForm.password" size="large" type="password" show-password placeholder="请输入密码"></el-input>
+                </el-form-item>
+                <el-alert class="role-alert" type="info" :closable="false" show-icon title="支持管理员、教师、顾问三类角色登录"></el-alert>
+                <el-button class="login-button" type="primary" size="large" :loading="loading" @click="login">进入后台</el-button>
+            </el-form>
+        </el-card>
+    </section>
+
+    <el-container v-else class="app-shell">
+        <el-aside width="248px" class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">沃</div>
+                <div>
+                    <h1>沃林学生管理系统</h1>
+                    <p>学生全流程数据管理后台</p>
+                </div>
+            </div>
+            <el-menu :default-active="activeModule" class="side-menu" @select="selectModule">
+                <el-menu-item v-for="item in menus" :key="item.key" :index="item.key">
+                    <span class="menu-icon" v-html="item.icon"></span>
+                    <span>{{ item.label }}</span>
+                </el-menu-item>
+            </el-menu>
+        </el-aside>
+
+        <el-container>
+            <el-header class="topbar">
+                <div class="topbar-title">
+                    <h2>{{ currentMenu.label }}</h2>
+                    <p>{{ currentMenu.subtitle }}</p>
+                </div>
+                <div class="topbar-actions">
+                    <el-input v-model="globalKeyword" class="global-search" clearable placeholder="搜索学生、班级或公司" @keyup.enter="reload"></el-input>
+                    <el-tag effect="dark" type="success">{{ roleLabel(user.role) }}</el-tag>
+                    <el-dropdown>
+                        <span class="user-chip">{{ user.real_name || user.username }}</span>
+                        <template #dropdown>
+                            <el-dropdown-menu>
+                                <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </template>
+                    </el-dropdown>
+                </div>
+            </el-header>
+
+            <el-main class="main">
+                <section v-if="activeModule === 'overview'" class="dashboard-page">
+                    <div class="hero-panel">
+                        <div>
+                            <p class="eyebrow">DATA COMMAND CENTER</p>
+                            <h2>学生管理驾驶舱</h2>
+                            <p>集中查看学生规模、成绩表现、就业进展与薪资概览。</p>
+                        </div>
+                        <div class="hero-orbit">
+                            <span>{{ summary.employment_rate || 0 }}%</span>
+                            <small>就业率</small>
+                        </div>
+                    </div>
+                    <div class="metric-grid">
+                        <el-card v-for="metric in metrics" :key="metric.label" class="metric-card" shadow="never">
+                            <p>{{ metric.label }}</p>
+                            <strong>{{ metric.value }}</strong>
+                            <small>{{ metric.hint }}</small>
+                        </el-card>
+                    </div>
+                    <div class="dashboard-grid">
+                        <el-card shadow="never">
+                            <template #header>就业薪资排行前五</template>
+                            <div v-for="(item, index) in statistics.topSalary" :key="index" class="rank-row">
+                                <span>{{ index + 1 }}</span>
+                                <div><strong>{{ item.name }}</strong><small>{{ item.class_name }} · {{ item.company_name }}</small></div>
+                                <b>{{ money(item.salary) }}</b>
+                            </div>
+                        </el-card>
+                        <el-card shadow="never">
+                            <template #header>班级平均成绩排行</template>
+                            <div v-for="item in statistics.classAverage" :key="item.class_id + item.exam_round" class="bar-row">
+                                <span>{{ item.class_id }} / 第{{ item.exam_round }}轮</span>
+                                <el-progress :percentage="Number(item.average_score || 0)" :stroke-width="10" color="#14b8a6"></el-progress>
+                            </div>
+                        </el-card>
+                        <el-card shadow="never">
+                            <template #header>统计分析入口</template>
+                            <div class="analysis-list">
+                                <el-button v-for="item in analysisEntries" :key="item.key" text bg @click="openStatistic(item.key)">
+                                    {{ item.label }}
+                                </el-button>
+                            </div>
+                        </el-card>
+                    </div>
+                </section>
+
+                <section v-else-if="isCrudModule" class="crud-page">
+                    <el-card shadow="never">
+                        <template #header>
+                            <div class="panel-title">
+                                <span>{{ currentConfig.name }}管理操作台</span>
+                                <small>{{ currentConfig.coverage }}</small>
+                            </div>
+                        </template>
+
+                        <div class="module-tools">
+                            <template v-if="activeModule === 'students'">
+                                <el-form :inline="true" :model="studentExact">
+                                    <el-form-item label="学生编号"><el-input v-model="studentExact.student_id" clearable></el-input></el-form-item>
+                                    <el-form-item label="姓名"><el-input v-model="studentExact.student_name" clearable></el-input></el-form-item>
+                                    <el-form-item label="班级ID"><el-input v-model="studentExact.class_id" clearable></el-input></el-form-item>
+                                    <el-form-item><el-button @click="queryStudentOne">精准查询</el-button></el-form-item>
+                                </el-form>
+                            </template>
+
+                            <template v-if="activeModule === 'scores'">
+                                <el-form :inline="true" :model="scoreRange">
+                                    <el-form-item label="最低分"><el-input-number v-model="scoreRange.min_score" :min="0" :max="100"></el-input-number></el-form-item>
+                                    <el-form-item label="最高分"><el-input-number v-model="scoreRange.max_score" :min="0" :max="100"></el-input-number></el-form-item>
+                                    <el-form-item><el-button @click="queryScoreRange">按分数查询</el-button></el-form-item>
+                                    <el-form-item><el-button type="warning" @click="openBulkScore">批量录入成绩</el-button></el-form-item>
+                                </el-form>
+                            </template>
+
+                            <template v-if="activeModule === 'employment'">
+                                <el-form :inline="true" :model="employmentQuery">
+                                    <el-form-item label="学生编号"><el-input v-model="employmentQuery.student_id" clearable></el-input></el-form-item>
+                                    <el-form-item label="班级"><el-input v-model="employmentQuery.class_name" clearable></el-input></el-form-item>
+                                    <el-form-item label="最低薪资"><el-input-number v-model="employmentQuery.min_salary" :min="0"></el-input-number></el-form-item>
+                                    <el-form-item label="最高薪资"><el-input-number v-model="employmentQuery.max_salary" :min="0"></el-input-number></el-form-item>
+                                    <el-form-item>
+                                        <el-button @click="queryEmploymentByStudent">按学生</el-button>
+                                        <el-button @click="queryEmploymentByClass">按班级</el-button>
+                                        <el-button @click="queryEmploymentBySalary">按薪资</el-button>
+                                        <el-button @click="reload">薪资分页</el-button>
+                                    </el-form-item>
+                                </el-form>
+                            </template>
+                        </div>
+
+                        <div class="table-toolbar">
+                            <el-form v-if="activeModule !== 'students'" :inline="true" :model="filters" class="filters">
+                                <el-form-item v-for="filter in currentConfig.filters" :key="filter.key" :label="filter.label">
+                                    <el-input v-model="filters[filter.key]" clearable :placeholder="filter.placeholder"></el-input>
+                                </el-form-item>
+                                <el-form-item>
+                                    <el-button type="primary" @click="reload">查询</el-button>
+                                    <el-button @click="resetFilters">重置</el-button>
+                                </el-form-item>
+                            </el-form>
+                            <el-button type="primary" @click="openCreate">新增{{ currentConfig.name }}</el-button>
+                        </div>
+
+                        <el-table :data="rows" v-loading="loading" border stripe height="520">
+                            <el-table-column v-for="column in currentConfig.columns" :key="column.prop" :prop="column.prop" :label="column.label" :min-width="column.width || 120">
+                                <template #default="{ row }">
+                                    <span v-if="column.type === 'money'" class="table-cell-text">{{ money(row[column.prop]) }}</span>
+                                    <el-tag v-else-if="column.type === 'tag'" type="success">{{ row[column.prop] || '-' }}</el-tag>
+                                    <div v-else-if="column.type === 'tags'" class="tag-list">
+                                        <el-tag v-for="name in normalizeTags(row[column.prop])" :key="name" size="small" effect="plain">{{ name }}</el-tag>
+                                    </div>
+                                    <span v-else class="table-cell-text">{{ row[column.prop] ?? '-' }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column fixed="right" label="操作" width="210">
+                                <template #default="{ row }">
+                                    <div class="row-actions">
+                                    <el-button v-if="['classes','teachers'].includes(activeModule)" link type="success" @click="showDetail(row)">详情</el-button>
+                                    <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+                                    <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+                                    </div>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+
+                        <div class="pagination-wrap">
+                            <span>共 {{ pager.total }} 条</span>
+                            <el-pagination background layout="prev, pager, next, sizes" :total="pager.total" :page-size="pager.size" :current-page="pager.page" @current-change="changePage" @size-change="changeSize"></el-pagination>
+                        </div>
+                    </el-card>
+                </section>
+
+                <section v-else-if="activeModule === 'statistics'" class="crud-page">
+                    <el-card shadow="never">
+                        <template #header>统计分析</template>
+                        <el-tabs v-model="activeStatistic" @tab-change="changeStatisticTab">
+                            <el-tab-pane v-for="item in analysisEntries" :key="item.key" :label="item.label" :name="item.key"></el-tab-pane>
+                        </el-tabs>
+                        <el-form v-if="currentStatisticParams.length" :inline="true" :model="statisticParams" class="statistic-query-form">
+                            <el-form-item v-for="param in currentStatisticParams" :key="param.key" :label="param.label">
+                                <el-input-number
+                                    v-if="param.type === 'number'"
+                                    v-model="statisticParams[param.key]"
+                                    :min="param.min"
+                                    :max="param.max"
+                                    :placeholder="param.placeholder || param.label"
+                                ></el-input-number>
+                                <el-input
+                                    v-else
+                                    v-model="statisticParams[param.key]"
+                                    clearable
+                                    :placeholder="param.placeholder || param.label"
+                                ></el-input>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" :loading="loading" @click="loadStatistic(activeStatistic)">查询</el-button>
+                                <el-button @click="resetStatisticParams">重置默认值</el-button>
+                            </el-form-item>
+                        </el-form>
+                        <el-table :data="pagedStatisticRows" border stripe>
+                            <el-table-column v-for="column in statisticColumns" :key="column" :prop="column" :label="fieldLabel(column)"></el-table-column>
+                        </el-table>
+                        <div class="pagination-wrap statistic-pagination">
+                            <span>共 {{ statisticRows.length }} 条</span>
+                            <el-pagination
+                                background
+                                layout="prev, pager, next, sizes"
+                                :total="statisticRows.length"
+                                :page-size="statisticPager.size"
+                                :current-page="statisticPager.page"
+                                @current-change="changeStatisticPage"
+                                @size-change="changeStatisticSize"
+                            ></el-pagination>
+                        </div>
+                    </el-card>
+                </section>
+
+                <section v-else class="extension-page">
+                    <el-card v-for="item in extensions" :key="item.title" class="extension-card" shadow="never">
+                        <h3>{{ item.title }}</h3>
+                        <p>{{ item.desc }}</p>
+                        <el-tag>规划中</el-tag>
+                    </el-card>
+                </section>
+            </el-main>
+        </el-container>
+
+        <el-dialog v-model="dialog.visible" :title="dialogTitle" width="720px">
+            <el-form :model="form" label-width="120px">
+                <el-form-item v-for="field in currentConfig.formFields" :key="field.key" :label="field.label">
+                    <el-select v-if="field.type === 'teacherSelect'" v-model="form[field.key]" multiple clearable filterable placeholder="请选择授课教师">
+                        <el-option v-for="teacher in teacherOptions" :key="teacher.id" :label="teacher.name" :value="teacher.id"></el-option>
+                    </el-select>
+                    <el-date-picker v-else-if="field.type === 'date'" v-model="form[field.key]" type="date" value-format="YYYY-MM-DD" placeholder="选择日期"></el-date-picker>
+                    <el-input-number v-else-if="field.type === 'number'" v-model="form[field.key]" :min="field.min ?? 0" :max="field.max"></el-input-number>
+                    <el-input v-else v-model="form[field.key]" :disabled="dialog.mode === 'edit' && field.readonlyOnEdit" clearable></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="dialog.visible = false">取消</el-button>
+                <el-button type="primary" :loading="loading" @click="saveRow">保存</el-button>
+            </template>
+        </el-dialog>
+
+        <el-dialog v-model="bulkDialog.visible" title="批量录入成绩" width="760px">
+            <p class="dialog-tip">请输入 JSON 数组，每项包含 student_id、exam_round、score、remark。</p>
+            <el-input v-model="bulkDialog.text" type="textarea" :rows="10"></el-input>
+            <template #footer>
+                <el-button @click="bulkDialog.visible = false">取消</el-button>
+                <el-button type="primary" @click="submitBulkScore">提交批量成绩</el-button>
+            </template>
+        </el-dialog>
+
+        <el-drawer v-model="detailDrawer.visible" title="查询详情" size="42%">
+            <div class="detail-view">
+                <div v-for="record in detailRecords(detailDrawer.data)" :key="record.title" class="detail-record">
+                    <h3>{{ record.title }}</h3>
+                    <div class="detail-grid">
+                        <div v-for="item in record.entries" :key="item.key" class="detail-item">
+                            <span>{{ item.label }}</span>
+                            <strong>{{ item.value }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </el-drawer>
+    </el-container>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus/dist/index.full.min.js"></script>
+<script src="/frontend/app.js"></script>
+</body>
+</html>
