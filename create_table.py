@@ -6,6 +6,7 @@ from app.models import score
 from app.models import student
 from app.models import teacher
 from app.models import user
+from app.models import ai_chat
 
 
 def create_all_tables():

@@ -34,3 +34,27 @@ Backend APIs return a unified structure:
   "data": null
 }
 ```
+
+## AI Chat API
+
+`POST /ai/chat` creates or continues an AI chat session. Request body:
+
+```json
+{
+  "session_id": "optional-existing-session-id",
+  "message": "你好"
+}
+```
+
+The service stores user and assistant messages in `ai_chat_sessions` and `ai_chat_messages`, then uses the latest `AI_CHAT_CONTEXT_LIMIT` messages as context. Third-party model calls are handled by `app/core/qwen_client.py`, so controller and DAO code do not call DashScope directly.
+
+Configure Qwen/DashScope with environment variables:
+
+- `QWEN_API_KEY`: DashScope API Key. `DASHSCOPE_API_KEY` is also accepted for compatibility.
+- `QWEN_TEXT_MODEL`: text chat model, default `qwen-plus`. `AI_CHAT_MODEL` is accepted as a compatibility fallback.
+- `QWEN_IMAGE_MODEL`: image model, default `qwen-image-2.0-pro`.
+- `QWEN_BASE_URL`: DashScope base URL, default `https://dashscope.aliyuncs.com/api/v1`.
+- `QWEN_TIMEOUT_SECONDS`: request timeout, default `30`.
+- `AI_CHAT_CONTEXT_LIMIT`: number of recent chat messages used as context, default `10`.
+
+Do not write real API Keys into source code, documentation examples, or commits. `QwenClient.generate_image()` provides text-to-image infrastructure support, but no image route is exposed yet.
