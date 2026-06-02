@@ -22,6 +22,10 @@ def get_student(db: Session, student_id=None, student_name=None, class_id=None):
     return select_id, select_name, select_class
 
 
+def get_student_by_student_id(db: Session, student_id: str):
+    return db.query(Student).filter(Student.student_id == student_id, Student.is_deleted == False).first()
+
+
 def create_student(db: Session, student_data: dict):
     for field in ["student_id", "class_id", "name"]:
         if not student_data.get(field):

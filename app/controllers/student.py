@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.core.database import get_db
 from app.services.student_service import StudentService
-from app.views.schemas.student import StudentCreate
+from app.views.schemas.student import StudentCommentRequest, StudentCreate
 
 
 students_router = APIRouter()
@@ -21,6 +21,11 @@ def get_student(student_id=None, student_name=None, class_id=None, db=Depends(ge
 @students_router.post("/students")
 def create_student(student: StudentCreate, db=Depends(get_db)):
     return StudentService.create_student(db, student)
+
+
+@students_router.post("/students/comment")
+def generate_student_comment(request: StudentCommentRequest, db=Depends(get_db)):
+    return StudentService.generate_comment(db, request)
 
 
 @students_router.put("/update_student/{student_id}")

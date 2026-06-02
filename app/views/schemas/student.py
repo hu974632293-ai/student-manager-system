@@ -20,3 +20,9 @@ class StudentCreate(BaseModel):
     is_deleted: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class StudentCommentRequest(BaseModel):
+    student_id: str = Field(...)
+    style: Optional[str] = "正式"
+    extra_notes: Optional[str] = None
