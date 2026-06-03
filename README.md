@@ -11,6 +11,7 @@ FastAPI + Vue static frontend student management system.
 - `app/dao/`: database CRUD/query layer.
 - `app/services/`: business service layer for validation, orchestration, and API response assembly.
 - `app/core/`: infrastructure code such as database setup, response helpers, and exception handlers.
+- `app/utils/`: reusable utility code, such as SMTP email sending.
 - `frontend/`: static Vue + Element Plus frontend served by FastAPI.
 - `tests/`: Python and frontend verification scripts.
 - `scripts/`: database and presentation helper scripts.
@@ -58,3 +59,54 @@ Configure Qwen/DashScope with environment variables:
 - `AI_CHAT_CONTEXT_LIMIT`: number of recent chat messages used as context, default `10`.
 
 Do not write real API Keys into source code, documentation examples, or commits. `QwenClient.generate_image()` provides text-to-image infrastructure support, but no image route is exposed yet.
+
+## Local Letter And Email API
+
+`POST /letters/generate` uses local Ollama to generate a Chinese letter. `POST /letters/send` generates the letter and sends it by SMTP.
+
+Generate request:
+
+```json
+{
+  "recipient": "assistant_teacher",
+  "topic": "感谢老师最近的帮助",
+  "method": "chat",
+  "tone": "真诚、自然"
+}
+```
+
+Send request adds email fields:
+
+```json
+{
+  "recipient": "head_teacher",
+  "topic": "请假说明",
+  "method": "generate",
+  "to_email": "teacher@example.com",
+  "subject": "请假说明"
+}
+```
+
+Configure Ollama and SMTP with environment variables:
+
+- `OLLAMA_BASE_URL`: local Ollama base URL, default `http://localhost:11434`.
+- `OLLAMA_MODEL`: local model name, default `llama3.1`.
+- `OLLAMA_TIMEOUT_SECONDS`: request timeout, default `60`.
+- `SMTP_HOST`: SMTP server host.
+- `SMTP_PORT`: SMTP port, default `587`.
+- `SMTP_USERNAME`: SMTP login username.
+- `SMTP_PASSWORD`: SMTP password or authorization code.
+- `SMTP_SENDER`: sender email address. Defaults to `SMTP_USERNAME` when omitted.
+- `SMTP_USE_TLS`: whether to use STARTTLS, default `true`.
+
+Install and start Ollama locally, then pull the configured model before calling these APIs. For example: `ollama pull llama3.1`.
+
+## Weather API
+
+`GET /weather/current?city=北京` queries current weather by city. `GET /weather/current?latitude=39.9042&longitude=116.4074` queries current weather by coordinates. `GET /weather/geocode?city=北京` queries city coordinates.
+
+Configure OpenWeatherMap-compatible access with environment variables:
+
+- `WEATHER_API_KEY`: weather API key. `OPENWEATHER_API_KEY` is also accepted.
+- `WEATHER_BASE_URL`: API base URL, default `https://api.openweathermap.org`.
+- `WEATHER_TIMEOUT_SECONDS`: request timeout, default `30`.

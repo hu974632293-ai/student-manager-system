@@ -9,6 +9,7 @@ from app.controllers.ai_chat import ai_chat_router
 from app.controllers.auth import auth_router, ensure_default_users
 from app.controllers.classes import class_router
 from app.controllers.jobs import router_job
+from app.controllers.letter import letter_router
 from app.controllers.score import router_score
 from app.controllers.statistics import statistics_router
 from app.controllers.student import students_router
@@ -20,6 +21,7 @@ from app.core.response import fail
 app = FastAPI(title="学生管理系统", description="FastAPI + Vue3 学生管理后台")
 
 app.include_router(ai_chat_router)
+app.include_router(letter_router)
 app.include_router(auth_router)
 app.include_router(weather_router)
 app.include_router(statistics_router)
