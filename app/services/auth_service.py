@@ -4,8 +4,10 @@ import hmac
 import json
 import os
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.core.database import Base, engine, get_db
@@ -89,6 +91,17 @@ class AuthService:
 
     @staticmethod
     def ensure_default_users() -> None:
+        for attempt in range(5):
+            try:
+                AuthService._ensure_default_users_once()
+                return
+            except OperationalError:
+                if attempt == 4:
+                    raise
+                time.sleep(2)
+
+    @staticmethod
+    def _ensure_default_users_once() -> None:
         Base.metadata.create_all(bind=engine)
         defaults = [
             ("admin", "admin123", "System Admin", "admin"),
