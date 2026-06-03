@@ -105,8 +105,8 @@ Install and start Ollama locally, then pull the configured model before calling 
 
 `GET /weather/current?city=北京` queries current weather by city. `GET /weather/current?latitude=39.9042&longitude=116.4074` queries current weather by coordinates. `GET /weather/geocode?city=北京` queries city coordinates.
 
-Configure OpenWeatherMap-compatible access with environment variables:
+Configure Amap weather access with environment variables:
 
-- `WEATHER_API_KEY`: weather API key. `OPENWEATHER_API_KEY` is also accepted.
-- `WEATHER_BASE_URL`: API base URL, default `https://api.openweathermap.org`.
+- `WEATHER_API_KEY`: Amap API key. `AMAP_API_KEY` is also accepted.
+- `WEATHER_BASE_URL`: API base URL, default `https://restapi.amap.com`.
 - `WEATHER_TIMEOUT_SECONDS`: request timeout, default `30`.
