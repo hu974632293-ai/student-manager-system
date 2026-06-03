@@ -58,16 +58,16 @@ def startup():
     ensure_default_users()
 
 
-@app.get("/")
+@app.get("/", summary="打开前端首页")
 async def root():
     return FileResponse("frontend/index.html")
 
 
-@app.get("/admin")
+@app.get("/admin", summary="打开管理后台页面")
 async def admin_page():
     return FileResponse("frontend/index.html")
 
 
-@app.get("/dashboard")
+@app.get("/dashboard", summary="打开数据看板页面")
 async def dashboard_page():
     return FileResponse("frontend/index.html")

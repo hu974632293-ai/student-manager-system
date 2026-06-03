@@ -91,6 +91,7 @@ controller -> service -> dao -> model
 - schema 不依赖 controller、service、dao。
 - 保持现有 API 路径兼容，除非用户明确要求改路由。
 - 所有接口响应必须遵循 `{code, msg, data}` 固定结构。
+- 新增或修改功能接口时，FastAPI 路由必须设置中文 `summary`，内容应直接描述该接口功能。
 
 ## 验证要求
 

@@ -11,31 +11,31 @@ from app.views.schemas.score import ScoreCreate, ScoreQueryByRange, ScoreQueryCo
 router_score = APIRouter(prefix="/score", tags=["score"])
 
 
-@router_score.post("/", status_code=status.HTTP_201_CREATED)
+@router_score.post("/", status_code=status.HTTP_201_CREATED, summary="新增学生成绩")
 def create_score(score: ScoreCreate, db: Session = Depends(get_db)):
     return ScoreService.create(db, score)
 
 
-@router_score.post("/bulk/", status_code=status.HTTP_201_CREATED)
+@router_score.post("/bulk/", status_code=status.HTTP_201_CREATED, summary="批量新增学生成绩")
 def bulk_create_scores(scores: List[ScoreCreate], db: Session = Depends(get_db)):
     return ScoreService.bulk_create(db, scores)
 
 
-@router_score.put("/update/{student_id}/{exam_round}")
+@router_score.put("/update/{student_id}/{exam_round}", summary="更新指定学生指定考试轮次成绩")
 def update_score(student_id: str, exam_round: int, score_update: ScoreUpdate, db: Session = Depends(get_db)):
     return ScoreService.update(db, student_id, exam_round, score_update)
 
 
-@router_score.delete("/delete/{student_id}/{exam_round}")
+@router_score.delete("/delete/{student_id}/{exam_round}", summary="删除指定学生指定考试轮次成绩")
 def delete_score(student_id: str, exam_round: int, db: Session = Depends(get_db)):
     return ScoreService.delete(db, student_id, exam_round)
 
 
-@router_score.get("/query/")
+@router_score.get("/query/", summary="按组合条件查询学生成绩")
 def query_scores_combined(query: ScoreQueryCombined = Depends(), db: Session = Depends(get_db)):
     return ScoreService.query_combined(db, query)
 
 
-@router_score.get("/range/")
+@router_score.get("/range/", summary="按分数范围查询学生成绩")
 def get_scores_by_range(query: ScoreQueryByRange = Depends(), db: Session = Depends(get_db)):
     return ScoreService.query_by_range(db, query)

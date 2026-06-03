@@ -31,11 +31,11 @@ def require_roles(*roles: str):
     return dependency
 
 
-@auth_router.post("/login")
+@auth_router.post("/login", summary="用户登录并获取访问令牌")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     return AuthService.login(db, payload)
 
 
-@auth_router.get("/me")
+@auth_router.get("/me", summary="获取当前登录用户信息")
 def me(user=Depends(get_current_user)):
     return AuthService.me(user)

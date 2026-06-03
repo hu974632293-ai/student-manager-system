@@ -7,11 +7,11 @@ from app.views.schemas.weather import CoordinateQueryRequest, WeatherQueryReques
 weather_router = APIRouter(prefix="/weather", tags=["weather"])
 
 
-@weather_router.get("/current")
+@weather_router.get("/current", summary="根据城市或经纬度查询当前天气")
 def query_weather(payload: WeatherQueryRequest = Depends()):
     return WeatherService.query_weather(payload)
 
 
-@weather_router.get("/geocode")
+@weather_router.get("/geocode", summary="根据城市名称查询经纬度")
 def query_coordinates(payload: CoordinateQueryRequest = Depends()):
     return WeatherService.query_coordinates(payload)
