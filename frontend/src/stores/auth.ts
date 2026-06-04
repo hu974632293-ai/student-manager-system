@@ -10,10 +10,22 @@ interface AuthState {
   user: UserProfile | null;
 }
 
+function loadStoredUser(): UserProfile | null {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    if (!raw) return null;
+    const user = JSON.parse(raw) as UserProfile;
+    return user && typeof user === "object" ? user : null;
+  } catch {
+    localStorage.removeItem(USER_KEY);
+    return null;
+  }
+}
+
 export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
     token: localStorage.getItem("wolin_token") || "",
-    user: JSON.parse(localStorage.getItem(USER_KEY) || "null") as UserProfile | null,
+    user: loadStoredUser(),
   }),
   getters: {
     isAuthenticated: (state) => Boolean(state.token && state.user),

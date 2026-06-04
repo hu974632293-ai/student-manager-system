@@ -80,3 +80,26 @@ async def admin_page():
 @app.get("/dashboard", summary="打开数据看板页面")
 async def dashboard_page():
     return FileResponse(FRONTEND_INDEX)
+
+
+@app.get("/{frontend_path:path}", summary="打开前端路由页面")
+async def frontend_page(frontend_path: str):
+    frontend_routes = {
+        "login",
+        "students",
+        "classes",
+        "teachers",
+        "scores",
+        "employment",
+        "statistics",
+        "logs",
+        "ai-chat",
+        "data-query",
+        "knowledge-base",
+        "agents",
+        "permissions",
+        "forbidden",
+    }
+    if frontend_path in frontend_routes:
+        return FileResponse(FRONTEND_INDEX)
+    raise HTTPException(status_code=404, detail="not found")
