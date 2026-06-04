@@ -134,6 +134,9 @@ def test_ai_chat_service_returns_unified_failure(monkeypatch):
         def create_message(self, db, session_id, role, content):
             return object()
 
+        def list_memories(self, db, user_id, limit):
+            return []
+
     class FakeClient:
         def chat(self, messages):
             raise QwenConfigError("QWEN_API_KEY or DASHSCOPE_API_KEY is required")
@@ -156,3 +159,101 @@ def test_ai_chat_service_returns_unified_failure(monkeypatch):
         "data": None,
     }
     assert fake_db.rolled_back is True
+
+
+def test_ai_chat_service_injects_user_memory(monkeypatch):
+    from app.services.ai_chat_service import AiChatService
+    from app.views.schemas.ai_chat import AiChatRequest
+
+    class FakeMemory:
+        id = 1
+        content = "用户喜欢简洁回答"
+
+    class FakeDao:
+        def get_session(self, db, session_id):
+            return object()
+
+        def list_recent_messages(self, db, session_id, limit):
+            return []
+
+        def list_memories(self, db, user_id, limit):
+            return [FakeMemory()]
+
+        def create_message(self, db, session_id, role, content):
+            return object()
+
+        def touch_session(self, db, session_id):
+            return object()
+
+    class FakeClient:
+        captured_messages = None
+
+        def chat(self, messages):
+            self.captured_messages = messages
+            return "ok"
+
+    class FakeUser:
+        id = 7
+
+    from app.services import ai_chat_service
+
+    fake_client = FakeClient()
+    monkeypatch.setattr(ai_chat_service, "ai_chat_dao", FakeDao())
+    monkeypatch.setattr(AiChatService, "client", fake_client)
+
+    result = AiChatService.chat(object(), AiChatRequest(session_id="s1", message="hello"), current_user=FakeUser())
+
+    assert result["code"] == 1
+    assert result["data"]["memory_count"] == 1
+    assert fake_client.captured_messages[0]["role"] == "system"
+    assert "用户喜欢简洁回答" in fake_client.captured_messages[0]["content"]
+
+
+def test_ai_chat_service_saves_explicit_memory(monkeypatch):
+    from app.services.ai_chat_service import AiChatService
+    from app.views.schemas.ai_chat import AiChatRequest
+
+    class FakeMemory:
+        id = 2
+        content = "我的专业是软件工程"
+
+    class FakeDao:
+        saved_content = None
+
+        def get_session(self, db, session_id):
+            return object()
+
+        def list_recent_messages(self, db, session_id, limit):
+            return []
+
+        def list_memories(self, db, user_id, limit):
+            return []
+
+        def create_memory(self, db, user_id, content, source="manual"):
+            self.saved_content = content
+            return FakeMemory()
+
+        def create_message(self, db, session_id, role, content):
+            return object()
+
+        def touch_session(self, db, session_id):
+            return object()
+
+    class FakeClient:
+        def chat(self, messages):
+            return "我记住了"
+
+    class FakeUser:
+        id = 7
+
+    from app.services import ai_chat_service
+
+    fake_dao = FakeDao()
+    monkeypatch.setattr(ai_chat_service, "ai_chat_dao", fake_dao)
+    monkeypatch.setattr(AiChatService, "client", FakeClient())
+
+    result = AiChatService.chat(object(), AiChatRequest(session_id="s1", message="请记住我的专业是软件工程"), current_user=FakeUser())
+
+    assert result["code"] == 1
+    assert result["data"]["saved_memory"] == "我的专业是软件工程"
+    assert fake_dao.saved_content == "我的专业是软件工程"

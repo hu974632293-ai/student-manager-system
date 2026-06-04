@@ -122,6 +122,14 @@ The non-admin accounts are not bound to real teacher or student records by defau
 
 The service stores user and assistant messages in `ai_chat_sessions` and `ai_chat_messages`, then uses the latest `AI_CHAT_CONTEXT_LIMIT` messages as context. Third-party model calls are handled by `app/core/qwen_client.py`, so controller and DAO code do not call DashScope directly.
 
+AI chat also supports user-level long-term memory through `ai_chat_memories`. When a user explicitly says `记住...`, the backend stores that content as memory and injects the current user's active memories as a system message before calling the model. Long-term memory is separated by login user and works across different chat sessions.
+
+Memory management APIs:
+
+- `GET /ai/memories`: list the current user's active memories.
+- `POST /ai/memories`: manually add one memory with `{"content": "..."}`.
+- `DELETE /ai/memories/{memory_id}`: delete one memory owned by the current user.
+
 Configure Qwen/DashScope with environment variables:
 
 - `QWEN_API_KEY`: DashScope API Key. `DASHSCOPE_API_KEY` is also accepted for compatibility.
@@ -130,6 +138,7 @@ Configure Qwen/DashScope with environment variables:
 - `QWEN_BASE_URL`: DashScope base URL, default `https://dashscope.aliyuncs.com/api/v1`.
 - `QWEN_TIMEOUT_SECONDS`: request timeout, default `30`.
 - `AI_CHAT_CONTEXT_LIMIT`: number of recent chat messages used as context, default `10`.
+- `AI_CHAT_MEMORY_LIMIT`: number of long-term memories injected into chat context, default `10`.
 
 Do not write real API Keys into source code, documentation examples, or commits. `QwenClient.generate_image()` provides text-to-image infrastructure support, but no image route is exposed yet.
 

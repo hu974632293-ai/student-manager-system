@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -29,4 +29,20 @@ class AiChatMessage(Base):
 
     __table_args__ = (
         Index("ix_ai_chat_messages_session_created", "session_id", "created_at"),
+    )
+
+
+class AiChatMemory(Base):
+    __tablename__ = "ai_chat_memories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    source = Column(String(20), nullable=False, default="manual")
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index("ix_ai_chat_memories_user_active_created", "user_id", "is_active", "created_at"),
     )
