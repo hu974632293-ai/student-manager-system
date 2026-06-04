@@ -71,12 +71,18 @@ class ScoreDAO:
         exam_round: Optional[int] = None,
         skip: int = 0,
         limit: int = 100,
+        allowed_student_ids: Optional[list[str]] = None,
     ):
         query = db.query(StudentScore, Student.name.label("student_name")).join(
             Student,
             StudentScore.student_id == Student.student_id,
         )
         count_query = db.query(func.count(StudentScore.id))
+        if allowed_student_ids is not None:
+            if not allowed_student_ids:
+                return [], 0
+            query = query.filter(StudentScore.student_id.in_(allowed_student_ids))
+            count_query = count_query.filter(StudentScore.student_id.in_(allowed_student_ids))
         if student_id is not None:
             query = query.filter(StudentScore.student_id == student_id)
             count_query = count_query.filter(StudentScore.student_id == student_id)
@@ -91,7 +97,14 @@ class ScoreDAO:
         return items, count_query.scalar()
 
     @staticmethod
-    def get_scores_by_range(db: Session, min_score: float = 0, max_score: float = 100, skip: int = 0, limit: int = 100):
+    def get_scores_by_range(
+        db: Session,
+        min_score: float = 0,
+        max_score: float = 100,
+        skip: int = 0,
+        limit: int = 100,
+        allowed_student_ids: Optional[list[str]] = None,
+    ):
         query = db.query(StudentScore, Student.name.label("student_name")).join(
             Student,
             StudentScore.student_id == Student.student_id,
@@ -100,11 +113,17 @@ class ScoreDAO:
             StudentScore.score >= min_score,
             StudentScore.score <= max_score,
         )
-        total = db.query(func.count(StudentScore.id)).filter(
+        count_query = db.query(func.count(StudentScore.id)).filter(
             StudentScore.score.isnot(None),
             StudentScore.score >= min_score,
             StudentScore.score <= max_score,
-        ).scalar()
+        )
+        if allowed_student_ids is not None:
+            if not allowed_student_ids:
+                return [], 0
+            query = query.filter(StudentScore.student_id.in_(allowed_student_ids))
+            count_query = count_query.filter(StudentScore.student_id.in_(allowed_student_ids))
+        total = count_query.scalar()
         items = []
         for score_obj, student_name in query.offset(skip).limit(limit).all():
             data = ScoreDAO.to_dict(score_obj)

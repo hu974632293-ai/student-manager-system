@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoginRequest(BaseModel):
@@ -11,6 +11,10 @@ class UserOut(BaseModel):
     username: str
     real_name: str
     role: str
+    teacher_id: int | None = None
+    student_id: str | None = None
+    permissions: list[str] = Field(default_factory=list)
+    modules: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 

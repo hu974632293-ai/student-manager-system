@@ -36,6 +36,37 @@ Backend APIs return a unified structure:
 }
 ```
 
+## Role Permissions
+
+The backend uses role-based access plus service-layer data scope filtering.
+
+Roles:
+
+- `admin`: full access, including logs and permission-sensitive system modules.
+- `teacher`: student, class, score, employment, statistics, and AI features; data is limited to linked teaching classes.
+- `student`: personal profile, own scores, own employment data, and common AI features; data is limited to `users.student_id`.
+- `consultant`: student and employment workflows for assigned students; data is limited by `students.consultant_id == users.teacher_id`.
+
+The `users` table includes optional identity binding fields:
+
+- `teacher_id`: links a login account to a teacher record.
+- `student_id`: links a login account to a student record.
+
+For existing databases without these fields, run:
+
+```powershell
+python scripts/ensure_user_identity_columns.py
+```
+
+Default development accounts are created on startup when missing:
+
+- `admin` / `admin123`
+- `teacher` / `teacher123`
+- `consultant` / `consultant123`
+- `student` / `student123`
+
+The non-admin accounts are not bound to real teacher or student records by default. Set `users.teacher_id` and `users.student_id` to real IDs before validating scoped data access.
+
 ## AI Chat API
 
 `POST /ai/chat` creates or continues an AI chat session. Request body:

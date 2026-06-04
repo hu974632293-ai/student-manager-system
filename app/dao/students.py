@@ -4,21 +4,39 @@ from sqlalchemy.sql.operators import or_
 from app.models.student import Student
 
 
-def get_allstudents(db: Session, skip: int = 0, limit: int = 10):
+def _apply_student_scope(query, student_ids=None, class_ids=None, consultant_id=None):
+    if student_ids is not None:
+        if not student_ids:
+            return query.filter(False)
+        query = query.filter(Student.student_id.in_(student_ids))
+    if class_ids is not None:
+        if not class_ids:
+            return query.filter(False)
+        query = query.filter(Student.class_id.in_(class_ids))
+    if consultant_id is not None:
+        query = query.filter(Student.consultant_id == consultant_id)
+    return query
+
+
+def get_allstudents(db: Session, skip: int = 0, limit: int = 10, student_ids=None, class_ids=None, consultant_id=None):
     query = db.query(Student).filter(Student.is_deleted == False).order_by(Student.student_id.asc())
+    query = _apply_student_scope(query, student_ids=student_ids, class_ids=class_ids, consultant_id=consultant_id)
     return query.offset(skip).limit(limit).all(), query.count()
 
 
-def get_student(db: Session, student_id=None, student_name=None, class_id=None):
+def get_student(db: Session, student_id=None, student_name=None, class_id=None, student_ids=None, class_ids=None, consultant_id=None):
     select_id = None
     select_name = None
     select_class = []
     if student_id not in (None, ""):
-        select_id = db.query(Student).filter(Student.student_id == student_id, Student.is_deleted == False).first()
+        query = db.query(Student).filter(Student.student_id == student_id, Student.is_deleted == False)
+        select_id = _apply_student_scope(query, student_ids=student_ids, class_ids=class_ids, consultant_id=consultant_id).first()
     if student_name not in (None, ""):
-        select_name = db.query(Student).filter(Student.name == student_name, Student.is_deleted == False).first()
+        query = db.query(Student).filter(Student.name == student_name, Student.is_deleted == False)
+        select_name = _apply_student_scope(query, student_ids=student_ids, class_ids=class_ids, consultant_id=consultant_id).first()
     if class_id not in (None, ""):
-        select_class = db.query(Student).filter(Student.class_id == class_id, Student.is_deleted == False).all()
+        query = db.query(Student).filter(Student.class_id == class_id, Student.is_deleted == False)
+        select_class = _apply_student_scope(query, student_ids=student_ids, class_ids=class_ids, consultant_id=consultant_id).all()
     return select_id, select_name, select_class
 
 

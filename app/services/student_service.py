@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.response import fail, success
 from app.dao import students as student_dao
+from app.services.access_scope_service import AccessScopeService
 from app.views.schemas.student import StudentCommentRequest, StudentCreate
 
 
@@ -11,6 +12,12 @@ SUPPORTED_COMMENT_STYLES = {"正式", "鼓励", "简洁", "详细", "班主任�
 
 
 class StudentService:
+    @staticmethod
+    def _scope_kwargs(db: Session, current_user=None) -> dict:
+        if current_user is None or AccessScopeService.is_admin(current_user):
+            return {}
+        return {"student_ids": AccessScopeService.allowed_student_ids(db, current_user)}
+
     @staticmethod
     def _format_student_profile(student) -> str:
         parts = []
@@ -69,17 +76,23 @@ class StudentService:
         return templates[style]
 
     @staticmethod
-    def list_students(db: Session, skip: int = 0, limit: int = 10):
-        students, total = student_dao.get_allstudents(db, skip=skip, limit=limit)
+    def list_students(db: Session, skip: int = 0, limit: int = 10, current_user=None):
+        students, total = student_dao.get_allstudents(
+            db,
+            skip=skip,
+            limit=limit,
+            **StudentService._scope_kwargs(db, current_user),
+        )
         return success({"total": total, "students": students}, "students found")
 
     @staticmethod
-    def get_student(db: Session, student_id=None, student_name=None, class_id=None):
+    def get_student(db: Session, student_id=None, student_name=None, class_id=None, current_user=None):
         select_id, select_name, select_class = student_dao.get_student(
             db,
             student_id=student_id,
             student_name=student_name,
             class_id=class_id,
+            **StudentService._scope_kwargs(db, current_user),
         )
         return success(
             {
@@ -102,7 +115,9 @@ class StudentService:
             return fail(str(exc))
 
     @staticmethod
-    def update_student(db: Session, student_id: str, student: StudentCreate):
+    def update_student(db: Session, student_id: str, student: StudentCreate, current_user=None):
+        if current_user is not None and not AccessScopeService.can_access_student(db, current_user, student_id):
+            return fail("permission denied")
         update_data = student.model_dump(exclude_unset=True)
         update_data.pop("student_id", None)
         update_data.pop("is_deleted", None)
@@ -112,14 +127,16 @@ class StudentService:
         return success(updated, "student updated")
 
     @staticmethod
-    def delete_student(db: Session, student_id: int = None, student_name: str = None):
+    def delete_student(db: Session, student_id: int = None, student_name: str = None, current_user=None):
+        if current_user is not None and student_id and not AccessScopeService.can_access_student(db, current_user, str(student_id)):
+            return fail("permission denied")
         deleted = student_dao.delete_student(db, student_id, student_name)
         if not deleted:
             return fail("student not found")
         return success(deleted, "student deleted")
 
     @staticmethod
-    def generate_comment(db: Session, request: StudentCommentRequest):
+    def generate_comment(db: Session, request: StudentCommentRequest, current_user=None):
         style = (request.style or "正式").strip()
         if style not in SUPPORTED_COMMENT_STYLES:
             return fail("unsupported comment style")
@@ -127,6 +144,8 @@ class StudentService:
         student_id = request.student_id.strip()
         if not student_id:
             return fail("student_id is required")
+        if current_user is not None and not AccessScopeService.can_access_student(db, current_user, student_id):
+            return fail("permission denied")
 
         student = student_dao.get_student_by_student_id(db, student_id)
         if not student:

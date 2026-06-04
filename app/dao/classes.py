@@ -8,8 +8,12 @@ from app.models.teacher import Teacher
 
 
 class ClassDao:
-    def get_classes(self, db: Session, page: int, size: int, keyword: Optional[str]) -> Tuple[int, List[Class]]:
+    def get_classes(self, db: Session, page: int, size: int, keyword: Optional[str], class_ids: Optional[list[int]] = None) -> Tuple[int, List[Class]]:
         query = db.query(Class).options(joinedload(Class.teachers)).filter(Class.is_deleted == False)
+        if class_ids is not None:
+            if not class_ids:
+                return 0, []
+            query = query.filter(Class.id.in_(class_ids))
         if keyword:
             like = f"%{keyword}%"
             query = query.filter(or_(Class.class_id.like(like), Class.head_teacher.like(like), Class.description.like(like)))
@@ -17,8 +21,13 @@ class ClassDao:
         items = query.order_by(Class.id.asc()).offset((page - 1) * size).limit(size).all()
         return total, items
 
-    def get_class_by_id(self, db: Session, class_id: int):
-        return db.query(Class).options(joinedload(Class.teachers)).filter(Class.id == class_id, Class.is_deleted == False).first()
+    def get_class_by_id(self, db: Session, class_id: int, class_ids: Optional[list[int]] = None):
+        query = db.query(Class).options(joinedload(Class.teachers)).filter(Class.id == class_id, Class.is_deleted == False)
+        if class_ids is not None:
+            if not class_ids:
+                return None
+            query = query.filter(Class.id.in_(class_ids))
+        return query.first()
 
     def create_class(self, db: Session, class_data: dict):
         data = dict(class_data)

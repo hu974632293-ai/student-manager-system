@@ -11,9 +11,11 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.core.database import Base, engine, get_db
+from app.core.permissions import get_modules_for_role, get_permissions_for_role
 from app.core.response import fail, success
+from app.core.schema_compat import ensure_user_identity_columns
 from app.models.user import User
-from app.views.schemas.auth import LoginRequest, LoginResponse
+from app.views.schemas.auth import LoginRequest, LoginResponse, UserOut
 
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "wolinsms-dev-secret")
@@ -54,6 +56,8 @@ class AuthService:
             "uid": user.id,
             "role": user.role,
             "name": user.real_name,
+            "teacher_id": user.teacher_id,
+            "student_id": user.student_id,
             "iat": int(now.timestamp()),
             "exp": int((now + timedelta(hours=TOKEN_EXPIRE_HOURS)).timestamp()),
         }
@@ -103,34 +107,60 @@ class AuthService:
     @staticmethod
     def _ensure_default_users_once() -> None:
         Base.metadata.create_all(bind=engine)
+        ensure_user_identity_columns()
         defaults = [
-            ("admin", "admin123", "System Admin", "admin"),
-            ("teacher", "teacher123", "Demo Teacher", "teacher"),
-            ("consultant", "consultant123", "Consultant", "consultant"),
+            ("admin", "admin123", "System Admin", "admin", None, None),
+            ("teacher", "teacher123", "Demo Teacher", "teacher", None, None),
+            ("consultant", "consultant123", "Consultant", "consultant", None, None),
+            ("student", "student123", "Demo Student", "student", None, None),
         ]
         db = next(get_db())
         try:
-            for username, password, real_name, role in defaults:
-                if not db.query(User).filter(User.username == username).first():
+            for username, password, real_name, role, teacher_id, student_id in defaults:
+                user = db.query(User).filter(User.username == username).first()
+                if not user:
                     db.add(
                         User(
                             username=username,
                             password_hash=AuthService.hash_password(password),
                             real_name=real_name,
                             role=role,
+                            teacher_id=teacher_id,
+                            student_id=student_id,
                         )
                     )
+                else:
+                    if user.teacher_id is None and teacher_id is not None:
+                        user.teacher_id = teacher_id
+                    if user.student_id is None and student_id is not None:
+                        user.student_id = student_id
             db.commit()
         finally:
             db.close()
+
+    @staticmethod
+    def user_out(user: User) -> UserOut:
+        return UserOut(
+            id=user.id,
+            username=user.username,
+            real_name=user.real_name,
+            role=user.role,
+            teacher_id=user.teacher_id,
+            student_id=user.student_id,
+            permissions=get_permissions_for_role(user.role),
+            modules=get_modules_for_role(user.role),
+        )
 
     @staticmethod
     def login(db: Session, payload: LoginRequest):
         user = db.query(User).filter(User.username == payload.username, User.is_active == True).first()
         if not user or not AuthService.verify_password(payload.password, user.password_hash):
             return fail("bad username or password")
-        return success(LoginResponse(access_token=AuthService.create_access_token(user), user=user), "login success")
+        return success(
+            LoginResponse(access_token=AuthService.create_access_token(user), user=AuthService.user_out(user)),
+            "login success",
+        )
 
     @staticmethod
     def me(user: User):
-        return success(user, "current user")
+        return success(AuthService.user_out(user), "current user")

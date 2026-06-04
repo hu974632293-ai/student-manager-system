@@ -7,8 +7,65 @@
 - 默认只处理后端代码：`app/`、`main.py`、`create_table.py`、`scripts/`、`tests/`、`docs/`。
 - 暂时不要主动读取、分析或重构 `frontend/`，用于节省 token。
 - 只有当用户点名要求前端改动，或后端 API 变更必须和前端接口对齐时，才读取 `frontend/`。
+- 用户明确要求前端开发时，前端栈固定采用 `Vue3 + Vite + TypeScript + Element Plus + Pinia + Vue Router + ECharts`，不再继续扩展旧的静态 CDN 前端。
 - 不改现有公开 API 路径，除非用户明确要求。
 - 不删除脚本、测试、文档、需求资料等文件，除非后续确认无用并得到用户明确指令。
+
+## 前端工程规范
+
+- `frontend/` 必须作为独立 Vite 工程维护。
+- 前端目录职责：
+  - `src/router/`：路由定义和路由守卫。
+  - `src/stores/`：Pinia 状态管理，登录态、用户信息、权限信息必须放在 store。
+  - `src/api/`：后端 API 调用封装，统一解析 `{code, msg, data}`。
+  - `src/views/`：页面级视图。
+  - `src/components/`：可复用 UI 组件。
+- 前端必须按角色动态生成菜单、控制路由访问、控制关键按钮显示。
+- 前端隐藏菜单和按钮只用于用户体验，不能作为安全边界；所有真实权限必须由后端校验。
+- UI 风格应适合后台管理系统：清晰导航、高密度信息、表格筛选、抽屉详情、分栏工作台，避免营销页式 hero 和装饰性堆叠。
+- AI 类页面采用工作台布局：左侧会话或资源，中间主交互区，右侧上下文、引用来源或工具调用记录。
+
+## 角色权限规范
+
+第一版角色固定为：
+
+- `admin`：管理员。
+- `teacher`：教师。
+- `student`：学生。
+- `consultant`：顾问。
+
+权限落地必须分四层：
+
+1. 角色权限配置：集中维护模块、操作、角色之间的关系。
+2. 前端路由守卫：禁止无权限角色访问页面。
+3. 后端依赖校验：controller 使用 `get_current_user` / `require_roles` 校验接口访问角色。
+4. service 数据范围过滤：service 根据当前登录用户限制可访问数据。
+
+账号与业务身份绑定规则：
+
+- `users.teacher_id` 绑定教师身份。
+- `users.student_id` 绑定学生身份。
+- `admin` 访问全量数据。
+- `teacher` 只能访问授课班级数据，授课班级来源于 `classes` 与 `class_teacher_link`。
+- `student` 只能访问本人数据，来源于 `users.student_id`。
+- `consultant` 只能访问负责学生数据，来源于 `students.consultant_id == users.teacher_id`。
+
+接口权限规则：
+
+- 日志模块只允许 `admin` 访问。
+- 普通大模型问答允许全部登录角色访问。
+- 智能问数默认只允许 `admin` 和 `teacher` 访问；涉及系统级 SQL 或全量数据时只允许 `admin`。
+- 本地知识库问答允许全部登录角色访问，但知识库管理能力只允许 `admin` 或后续明确授权角色。
+- 智能体允许全部登录角色访问；涉及工具调用、系统配置、跨用户数据时必须进一步限制。
+- 新增或修改接口必须继续使用中文 `summary`，并保持 `{code, msg, data}` 返回格式。
+
+## 并行开发与提交
+
+- 同工作区并行开发时，前端会话和后端会话必须严格按文件边界拆分。
+- 前端会话优先只改 `frontend/`、前端构建配置和必要前端说明。
+- 后端会话优先只改 `app/`、`create_table.py`、`scripts/`、`tests/`、后端说明。
+- `README.md`、`.gitignore`、`app/main.py` 等共享文件改动前必须确认是否会影响另一会话。
+- 提交前必须检查 `git status` 和 staged 文件，禁止把另一会话未完成改动混入提交。
 
 ## MVC 分层规则
 

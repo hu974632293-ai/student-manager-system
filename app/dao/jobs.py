@@ -10,12 +10,26 @@ def student_exists(db: Session, student_id: str) -> bool:
     return db.query(Student.id).filter(Student.student_id == student_id).first() is not None
 
 
-def query_student_id(db: Session, student_id: str):
-    return db.query(StudentJob).filter(StudentJob.student_id == student_id).all()
+def _apply_job_scope(query, allowed_student_ids=None, class_names=None):
+    if allowed_student_ids is not None:
+        if not allowed_student_ids:
+            return query.filter(False)
+        query = query.filter(StudentJob.student_id.in_(allowed_student_ids))
+    if class_names is not None:
+        if not class_names:
+            return query.filter(False)
+        query = query.filter(StudentJob.class_name.in_(class_names))
+    return query
 
 
-def get_student_jobs_by_class(db: Session, class_name: str):
-    return db.query(StudentJob).filter(StudentJob.class_name == class_name).all()
+def query_student_id(db: Session, student_id: str, allowed_student_ids=None, class_names=None):
+    query = db.query(StudentJob).filter(StudentJob.student_id == student_id)
+    return _apply_job_scope(query, allowed_student_ids=allowed_student_ids, class_names=class_names).all()
+
+
+def get_student_jobs_by_class(db: Session, class_name: str, allowed_student_ids=None, class_names=None):
+    query = db.query(StudentJob).filter(StudentJob.class_name == class_name)
+    return _apply_job_scope(query, allowed_student_ids=allowed_student_ids, class_names=class_names).all()
 
 
 def get_job_by_id(db: Session, job_id: int):
@@ -41,8 +55,9 @@ def create_student_job(db: Session, job_data: dict):
     return job
 
 
-def get_jobs_by_salary_range(db: Session, min_salary: Optional[float] = None, max_salary: Optional[float] = None):
+def get_jobs_by_salary_range(db: Session, min_salary: Optional[float] = None, max_salary: Optional[float] = None, allowed_student_ids=None, class_names=None):
     query = db.query(StudentJob)
+    query = _apply_job_scope(query, allowed_student_ids=allowed_student_ids, class_names=class_names)
     if min_salary is not None:
         query = query.filter(StudentJob.salary >= min_salary)
     if max_salary is not None:
@@ -56,8 +71,9 @@ def delete_student_job_by_student_id(db: Session, student_id: str) -> int:
     return deleted
 
 
-def get_job_page(db: Session, page: int, size: int):
+def get_job_page(db: Session, page: int, size: int, allowed_student_ids=None, class_names=None):
     query = db.query(StudentJob).order_by(StudentJob.salary.desc())
+    query = _apply_job_scope(query, allowed_student_ids=allowed_student_ids, class_names=class_names)
     total = query.count()
     items = query.offset((page - 1) * size).limit(size).all()
     return {"total": total, "page": page, "size": size, "list": items}
