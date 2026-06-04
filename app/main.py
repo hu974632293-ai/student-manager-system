@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -19,6 +21,11 @@ from app.controllers.weather import weather_router
 from app.core.response import fail
 
 
+FRONTEND_ROOT = Path("frontend")
+FRONTEND_DIST = FRONTEND_ROOT / "dist"
+FRONTEND_STATIC_DIR = FRONTEND_DIST if FRONTEND_DIST.exists() else FRONTEND_ROOT
+FRONTEND_INDEX = FRONTEND_STATIC_DIR / "index.html"
+
 app = FastAPI(title="学生管理系统", description="FastAPI + Vue3 学生管理后台")
 
 app.include_router(ai_chat_router)
@@ -32,7 +39,7 @@ app.include_router(router_job)
 app.include_router(students_router)
 app.include_router(router_score)
 app.include_router(class_router)
-app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+app.mount("/frontend", StaticFiles(directory=str(FRONTEND_STATIC_DIR)), name="frontend")
 
 
 @app.exception_handler(HTTPException)
@@ -62,14 +69,14 @@ def startup():
 
 @app.get("/", summary="打开前端首页")
 async def root():
-    return FileResponse("frontend/index.html")
+    return FileResponse(FRONTEND_INDEX)
 
 
 @app.get("/admin", summary="打开管理后台页面")
 async def admin_page():
-    return FileResponse("frontend/index.html")
+    return FileResponse(FRONTEND_INDEX)
 
 
 @app.get("/dashboard", summary="打开数据看板页面")
 async def dashboard_page():
-    return FileResponse("frontend/index.html")
+    return FileResponse(FRONTEND_INDEX)

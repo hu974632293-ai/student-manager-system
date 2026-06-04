@@ -24,6 +24,7 @@ htmlcov/
 # Build artifacts
 build/
 dist/
+node_modules/
 *.egg-info/
 
 # Logs and local runtime files

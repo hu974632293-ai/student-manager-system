@@ -24,6 +24,29 @@ python main.py
 
 The compatibility entrypoint still exposes `main:app`, so existing `uvicorn main:app --host 127.0.0.1 --port 8088` commands continue to work.
 
+## Frontend
+
+The frontend is a Vite application under `frontend/`.
+
+Development:
+
+```powershell
+cd frontend
+npm install
+npm run dev -- --port 5173
+```
+
+The Vite dev server proxies backend API requests to `http://127.0.0.1:8088`.
+
+Production build:
+
+```powershell
+cd frontend
+npm run build
+```
+
+After build, FastAPI serves `frontend/dist/index.html` and static assets under `/frontend`. If `frontend/dist` does not exist, FastAPI falls back to the source `frontend/index.html`, which is intended for Vite development rather than direct browser use.
+
 ## API Response
 
 Backend APIs return a unified structure:
