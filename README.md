@@ -59,6 +59,25 @@ Backend APIs return a unified structure:
 }
 ```
 
+## Runtime Logging
+
+The backend uses `app/core/logger.py` and `app/core/logging_middleware.py` for developer runtime logs.
+
+Default outputs:
+
+- Console: all logs at the configured level.
+- `logs/app.log`: application and request logs.
+- `logs/error.log`: `ERROR` and `CRITICAL` logs only.
+
+Useful environment variables:
+
+- `LOG_LEVEL`: logging level, default `INFO`. Use `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.
+- `LOG_DIR`: log directory, default `logs`.
+- `LOG_MAX_BYTES`: max size of each log file before rotation, default `10485760`.
+- `LOG_BACKUP_COUNT`: number of rotated files to keep, default `5`.
+
+The request logging middleware records method, path, filtered query string, status code, duration, and client IP. Sensitive query keys such as `password`, `token`, `authorization`, `secret`, and `api_key` are masked.
+
 ## Role Permissions
 
 The backend uses role-based access plus service-layer data scope filtering.

@@ -18,8 +18,12 @@ from app.controllers.statistics import statistics_router
 from app.controllers.student import students_router
 from app.controllers.teacher import teacher_router
 from app.controllers.weather import weather_router
+from app.core.logger import get_logger
+from app.core.logging_middleware import RequestLoggingMiddleware
 from app.core.response import fail
 
+
+logger = get_logger("app")
 
 FRONTEND_ROOT = Path("frontend")
 FRONTEND_DIST = FRONTEND_ROOT / "dist"
@@ -27,6 +31,7 @@ FRONTEND_STATIC_DIR = FRONTEND_DIST if FRONTEND_DIST.exists() else FRONTEND_ROOT
 FRONTEND_INDEX = FRONTEND_STATIC_DIR / "index.html"
 
 app = FastAPI(title="学生管理系统", description="FastAPI + Vue3 学生管理后台")
+app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(ai_chat_router)
 app.include_router(letter_router)
@@ -44,26 +49,31 @@ app.mount("/frontend", StaticFiles(directory=str(FRONTEND_STATIC_DIR)), name="fr
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.warning("HTTP异常 path=%s status=%s detail=%s", request.url.path, exc.status_code, exc.detail)
     return JSONResponse(status_code=exc.status_code, content=fail(str(exc.detail)))
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning("请求参数校验失败 path=%s errors=%s", request.url.path, exc.errors())
     return JSONResponse(status_code=422, content=fail("request validation failed", exc.errors()))
 
 
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
+    logger.exception("数据库异常 path=%s", request.url.path)
     return JSONResponse(status_code=500, content=fail("database error"))
 
 
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
+    logger.exception("服务异常 path=%s", request.url.path)
     return JSONResponse(status_code=500, content=fail("server error"))
 
 
 @app.on_event("startup")
 def startup():
+    logger.info("学生管理系统后端启动")
     ensure_default_users()
 
 
