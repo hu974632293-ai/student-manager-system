@@ -5,6 +5,7 @@ import { useRouter } from "vue-router";
 
 import { notifyError } from "@/api/http";
 import { useAuthStore } from "@/stores/auth";
+import heroImage from "../../assets/dashboard-hero.png";
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -35,16 +36,16 @@ async function submit() {
 <template>
   <main class="login-page">
     <section class="login-visual">
-      <img src="/assets/dashboard-hero.png" alt="学生管理系统数据看板" />
+      <img :src="heroImage" alt="学生管理系统数据看板" />
       <div class="visual-copy">
         <p>Role Based Console</p>
         <h1>学生管理系统</h1>
-        <span>按角色进入不同工作台，接口权限由后端兜底。</span>
+        <span>按角色进入不同工作台，接口权限与数据范围由后端兜底。</span>
       </div>
     </section>
     <section class="login-panel">
       <div class="login-heading">
-        <div class="brand-mark">沃</div>
+        <div class="brand-mark">管</div>
         <div>
           <h2>登录工作台</h2>
           <p>管理员、教师、学生、顾问使用同一入口</p>

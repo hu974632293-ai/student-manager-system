@@ -60,7 +60,7 @@ def update_student(
 
 @students_router.post("/students_delete/", summary="按学生编号或姓名删除学生")
 def delete_student(
-    student_id: int = None,
+    student_id: str = None,
     student_name: str = None,
     db=Depends(get_db),
     current_user=Depends(require_roles("admin")),

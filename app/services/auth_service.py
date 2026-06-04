@@ -14,6 +14,8 @@ from app.core.database import Base, engine, get_db
 from app.core.permissions import get_modules_for_role, get_permissions_for_role
 from app.core.response import fail, success
 from app.core.schema_compat import ensure_user_identity_columns
+from app.models.student import Student
+from app.models.teacher import Teacher
 from app.models.user import User
 from app.views.schemas.auth import LoginRequest, LoginResponse, UserOut
 
@@ -108,11 +110,19 @@ class AuthService:
     def _ensure_default_users_once() -> None:
         Base.metadata.create_all(bind=engine)
         ensure_user_identity_columns()
+        db = next(get_db())
+        try:
+            demo_teacher = db.query(Teacher).filter(Teacher.is_deleted == False).order_by(Teacher.id).first()
+            demo_student = db.query(Student).filter(Student.is_deleted == False).order_by(Student.id).first()
+            demo_teacher_id = demo_teacher.id if demo_teacher else None
+            demo_student_id = demo_student.student_id if demo_student else None
+        finally:
+            db.close()
         defaults = [
             ("admin", "admin123", "System Admin", "admin", None, None),
-            ("teacher", "teacher123", "Demo Teacher", "teacher", None, None),
-            ("consultant", "consultant123", "Consultant", "consultant", None, None),
-            ("student", "student123", "Demo Student", "student", None, None),
+            ("teacher", "teacher123", "Demo Teacher", "teacher", demo_teacher_id, None),
+            ("consultant", "consultant123", "Consultant", "consultant", demo_teacher_id, None),
+            ("student", "student123", "Demo Student", "student", None, demo_student_id),
         ]
         db = next(get_db())
         try:

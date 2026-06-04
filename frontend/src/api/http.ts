@@ -35,6 +35,7 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
     ...options,
     headers,
   });
+
   let payload: ApiEnvelope<T> | null = null;
   try {
     payload = (await response.json()) as ApiEnvelope<T>;

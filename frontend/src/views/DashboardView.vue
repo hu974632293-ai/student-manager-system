@@ -3,13 +3,14 @@ import { computed } from "vue";
 
 import { roleLabels, roleModules } from "@/permissions";
 import { useAuthStore } from "@/stores/auth";
+import heroImage from "../../assets/dashboard-hero.png";
 
 const auth = useAuthStore();
 const modules = computed(() => roleModules(auth.role, auth.modules));
 const identity = computed(() => {
   if (!auth.user) return "未绑定";
   if (auth.user.role === "teacher") return auth.user.teacher_id ? `教师ID ${auth.user.teacher_id}` : "未绑定教师身份";
-  if (auth.user.role === "student") return auth.user.student_id ? `学生编号 ${auth.user.student_id}` : "未绑定学生身份";
+  if (auth.user.role === "student") return auth.user.student_id ? `学号 ${auth.user.student_id}` : "未绑定学生身份";
   if (auth.user.role === "consultant") return auth.user.teacher_id ? `顾问ID ${auth.user.teacher_id}` : "未绑定顾问身份";
   return "全量数据权限";
 });
@@ -23,7 +24,7 @@ const identity = computed(() => {
         <h1>{{ auth.user?.real_name || auth.user?.username }}</h1>
         <span>{{ auth.role ? roleLabels[auth.role] : "用户" }} · {{ identity }}</span>
       </div>
-      <img src="/assets/dashboard-hero.png" alt="数据看板" />
+      <img :src="heroImage" alt="数据看板" />
     </div>
 
     <div class="metric-grid">
