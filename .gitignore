@@ -39,6 +39,10 @@ logs/
 *.swp
 *.swo
 
+# Local agent files
+CLAUDE.md
+.claude/settings.local.json
+
 # OS files
 .DS_Store
 Thumbs.db
