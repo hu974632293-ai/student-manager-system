@@ -1,8 +1,8 @@
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.logger import logger
 from app.core.database import Base, engine
+from app.core.logger import logger
 
 
 def ensure_user_identity_columns() -> None:
@@ -23,14 +23,19 @@ def ensure_user_identity_columns() -> None:
 
 
 def ensure_ai_chat_schema_compat() -> None:
-    """给 ai_chat 相关表补充长期记忆功能所需的新列和新表。"""
+    """为 ai_chat 相关表补齐长期记忆、摘要和向量检索所需结构。"""
     try:
-        # 检查 ai_chat_sessions 表是否存在
         inspector = inspect(engine)
-        if "ai_chat_sessions" not in inspector.get_table_names():
-            return  # 表尚未创建，由 create_all 统一处理
+        existing_tables = set(inspector.get_table_names())
+        if "ai_chat_sessions" not in existing_tables:
+            return
 
-        # 新增列 — 只添加不存在的列
+        for table_name in ("ai_chat_memories", "ai_chat_message_vectors"):
+            if table_name not in existing_tables:
+                Base.metadata.tables[table_name].create(bind=engine)
+                logger.info("Created table: %s", table_name)
+
+        inspector = inspect(engine)
         columns_to_add = {
             "ai_chat_sessions": [
                 ("user_id", "INTEGER NULL"),
@@ -48,15 +53,10 @@ def ensure_ai_chat_schema_compat() -> None:
 
         statements = []
         for table, columns in columns_to_add.items():
-            existing_cols = {c["name"] for c in inspector.get_columns(table)}
+            existing_cols = {column["name"] for column in inspector.get_columns(table)}
             for col_name, col_def in columns:
                 if col_name not in existing_cols:
-                    statements.append(f"ALTER TABLE {table} ADD COLUMN {col_def}")
-
-        # 新建 AiChatMessageVector 表（如果不存在）
-        if "ai_chat_message_vectors" not in inspector.get_table_names():
-            Base.metadata.tables["ai_chat_message_vectors"].create(bind=engine)
-            logger.info("Created table: ai_chat_message_vectors")
+                    statements.append(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_def}")
 
         if not statements:
             return
@@ -66,4 +66,4 @@ def ensure_ai_chat_schema_compat() -> None:
                 logger.info("Running: %s", statement)
                 connection.execute(text(statement))
     except SQLAlchemyError:
-        logger.warning("Schema migration for ai_chat memory features skipped or failed (may already be applied)")
+        logger.exception("Schema migration for ai_chat memory features failed")
