@@ -142,6 +142,35 @@ Configure Qwen/DashScope with environment variables:
 
 Do not write real API Keys into source code, documentation examples, or commits. `QwenClient.generate_image()` provides text-to-image infrastructure support, but no image route is exposed yet.
 
+## Data Query NL2SQL API
+
+`POST /data-query/nl2sql` converts a Chinese natural-language question into a read-only SQL query, executes it, and returns both table data and a short Chinese summary.
+
+Request body:
+
+```json
+{
+  "question": "哪个班级平均成绩最高？",
+  "limit": 100,
+  "show_sql": true
+}
+```
+
+Response data:
+
+```json
+{
+  "question": "哪个班级平均成绩最高？",
+  "sql": "SELECT ... LIMIT 100",
+  "columns": ["class_id", "average_score"],
+  "rows": [{ "class_id": "A01", "average_score": 86.5 }],
+  "row_count": 1,
+  "summary": "A01 班平均成绩最高，平均分为 86.5。"
+}
+```
+
+The first version is limited to `admin` and `teacher`. The backend only allows single-statement `SELECT` queries against the student, class, teacher, score, employment, and class-teacher link tables. Teacher requests are scoped with the existing service-layer student access rules.
+
 ## Local Letter And Email API
 
 `POST /letters/generate` uses local Ollama to generate a Chinese letter. `POST /letters/send` generates the letter and sends it by SMTP.

@@ -14,7 +14,7 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 5173,
     proxy: {
-      "^/(auth|students|classes|teacher|score|employment|jobs|statistics|ai|logs|letters|weather)": {
+      "^/(auth|students|classes|teacher|score|employment|jobs|statistics|ai|logs|letters|weather|data-query)": {
         target: "http://127.0.0.1:8088",
         changeOrigin: true,
       },

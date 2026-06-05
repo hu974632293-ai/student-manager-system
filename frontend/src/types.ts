@@ -36,3 +36,18 @@ export interface TableColumn {
   key: string;
   label: string;
 }
+
+export interface DataQueryRequest {
+  question: string;
+  limit: number;
+  show_sql: boolean;
+}
+
+export interface DataQueryResult {
+  question: string;
+  sql: string;
+  columns: string[];
+  rows: Record<string, unknown>[];
+  row_count: number;
+  summary: string;
+}

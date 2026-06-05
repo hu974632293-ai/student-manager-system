@@ -71,7 +71,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: "data-query",
         name: "data-query",
-        component: () => import("@/views/WorkbenchView.vue"),
+        component: () => import("@/views/DataQueryView.vue"),
         meta: { module: "data-query" },
       },
       {
