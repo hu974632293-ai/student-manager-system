@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from app.core.token_estimator import TokenEstimator
+from app.services.ai_chat_service import AiChatService
 from app.services.ai_chat_compressor import ContextCompressor
 from app.services.ai_chat_retriever import SemanticRetriever
 
@@ -115,3 +116,13 @@ class TestSemanticRetriever:
         messages_short = []
         result = retriever.retrieve("test", messages_short, messages_short)
         assert result == []
+
+
+class TestAiChatService:
+    def test_count_retrieval_context_uses_formatted_lines(self):
+        context = "相关历史\n1. 第一条\n2. 第二条"
+
+        assert AiChatService._count_retrieval_context(context) == 2
+
+    def test_count_retrieval_context_empty(self):
+        assert AiChatService._count_retrieval_context("") == 0

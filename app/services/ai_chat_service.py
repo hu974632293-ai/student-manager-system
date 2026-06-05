@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import uuid
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -226,7 +227,7 @@ class AiChatService:
                     "saved_memory": saved_memory,
                     "compression_applied": compression_info["applied"],
                     "compression_count": compression_info["count"],
-                    "retrieval_count": len(json.loads(retrieval_context)) if retrieval_context else 0,
+                    "retrieval_count": AiChatService._count_retrieval_context(retrieval_context),
                 }
             )
 
@@ -283,6 +284,12 @@ class AiChatService:
         except Exception as exc:
             logger.warning("Semantic retrieval failed (will skip): %s", exc)
             return ""
+
+    @staticmethod
+    def _count_retrieval_context(context: str) -> int:
+        if not context:
+            return 0
+        return len(re.findall(r"(?m)^\d+\.\s+", context))
 
     @classmethod
     def _store_message_embedding(

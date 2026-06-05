@@ -65,7 +65,7 @@ class WeatherClient:
         if city:
             geocodes = self.query_coordinates(city)
             if not geocodes:
-                raise WeatherResponseError("city geocode result is empty")
+                raise WeatherResponseError("未查询到该城市或地址的经纬度信息")
             adcode = geocodes[0].get("adcode")
         elif latitude is not None and longitude is not None:
             adcode = self.query_adcode_by_location(latitude, longitude)
@@ -73,7 +73,7 @@ class WeatherClient:
             raise WeatherConfigError("city or latitude/longitude is required")
 
         if not adcode:
-            raise WeatherResponseError("weather city adcode is empty")
+            raise WeatherResponseError("未匹配到可查询天气的行政区编码")
         params = {"key": api_key, "city": str(adcode), "extensions": "base", "output": "JSON"}
         data = self._get(f"{self.config.base_url}/v3/weather/weatherInfo", params)
         self._ensure_amap_success(data)
@@ -101,13 +101,13 @@ class WeatherClient:
         self._ensure_amap_success(data)
         regeocode = data.get("regeocode")
         if not isinstance(regeocode, dict):
-            raise WeatherResponseError("reverse geocode response missing regeocode")
+            raise WeatherResponseError("经纬度反查结果缺少地址信息")
         address_component = regeocode.get("addressComponent")
         if not isinstance(address_component, dict):
-            raise WeatherResponseError("reverse geocode response missing addressComponent")
+            raise WeatherResponseError("经纬度反查结果缺少行政区信息")
         adcode = address_component.get("adcode")
         if not isinstance(adcode, str) or not adcode:
-            raise WeatherResponseError("reverse geocode response missing adcode")
+            raise WeatherResponseError("经纬度未匹配到可查询天气的行政区编码，请输入中国境内坐标或改用城市查询")
         return adcode
 
     def _get(self, url: str, params: dict[str, str]) -> dict | list:

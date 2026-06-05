@@ -45,9 +45,11 @@ async function send() {
       body: JSON.stringify({ session_id: sessionId.value || undefined, message }),
     });
     sessionId.value = data.session_id;
-    messages.value.push({ role: "assistant", content: data.reply });
+    messages.value.push({ role: "assistant", content: data.reply || "AI 未返回有效内容" });
     if (data.saved_memory) await loadMemories();
   } catch (error) {
+    const message = error instanceof Error ? error.message : "请求失败";
+    messages.value.push({ role: "assistant", content: `请求失败：${message}` });
     notifyError(error);
   } finally {
     loading.value = false;

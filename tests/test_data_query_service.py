@@ -22,6 +22,23 @@ def test_prepare_sql_rewrites_limit():
     assert sql == "SELECT students.name FROM students LIMIT 20"
 
 
+def test_prepare_sql_removes_invalid_score_soft_delete_filter():
+    raw_sql = (
+        "SELECT classes.class_id, AVG(student_scores.score) AS avg_score "
+        "FROM students JOIN classes ON students.class_id = classes.id "
+        "JOIN student_scores ON students.student_id = student_scores.student_id "
+        "WHERE students.is_deleted = 0 AND classes.is_deleted = 0 "
+        "AND student_scores.is_deleted = 0 "
+        "GROUP BY classes.class_id ORDER BY avg_score DESC LIMIT 100"
+    )
+
+    sql = DataQueryService._prepare_sql(raw_sql, 100)
+
+    assert "student_scores.is_deleted" not in sql
+    assert "students.is_deleted = 0" in sql
+    assert "classes.is_deleted = 0" in sql
+
+
 def test_apply_teacher_scope_to_student_tables():
     sql = "SELECT students.name FROM students WHERE students.is_deleted = 0 LIMIT 10"
     scoped = DataQueryService._apply_access_scope(sql, ["S001"])

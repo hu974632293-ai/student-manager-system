@@ -36,10 +36,10 @@ async function query() {
         <h3>经纬度查询</h3>
         <p>输入城市或地址，查询标准化地址、经纬度和行政区编码。</p>
       </div>
-      <div class="toolbar-actions">
-        <el-input v-model="city" placeholder="例如：北京、杭州市西湖区" style="width: 280px" @keyup.enter="query" />
-        <el-button type="primary" :loading="loading" @click="query">查询</el-button>
-      </div>
+      <form class="toolbar-actions" @submit.prevent="query">
+        <el-input v-model="city" placeholder="例如：北京、杭州市西湖区" style="width: 280px" />
+        <el-button type="primary" native-type="submit" :loading="loading">查询</el-button>
+      </form>
     </div>
 
     <el-table :data="rows" border stripe v-loading="loading" height="520">

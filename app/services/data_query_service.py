@@ -27,6 +27,7 @@ class DataQueryService:
         "student_jobs",
         "class_teacher_link",
     }
+    soft_delete_tables = {"students", "classes", "teachers", "student_jobs"}
     sql_keywords = {
         "where",
         "join",
@@ -137,9 +138,12 @@ class DataQueryService:
                 },
                 "data query completed",
             )
-        except (SQLAlchemyError, QwenConfigError, QwenRequestError, QwenResponseError) as exc:
+        except SQLAlchemyError:
             db.rollback()
             logger.exception("NL2SQL query failed")
+            return fail("智能问数查询执行失败，请调整问题或稍后重试")
+        except (QwenConfigError, QwenRequestError, QwenResponseError) as exc:
+            logger.exception("NL2SQL model request failed")
             return fail(str(exc))
         except ValueError as exc:
             logger.warning("NL2SQL rejected: %s", exc)
@@ -190,9 +194,26 @@ class DataQueryService:
     @classmethod
     def _prepare_sql(cls, sql: str, limit: int) -> str:
         cleaned = sql.strip().strip(";").strip()
+        cleaned = cls._remove_invalid_soft_delete_filters(cleaned)
         cls._validate_sql(cleaned)
         without_limit = cls._strip_trailing_limit(cleaned)
         return f"{without_limit} LIMIT {limit}"
+
+    @classmethod
+    def _remove_invalid_soft_delete_filters(cls, sql: str) -> str:
+        for table in sorted(cls.allowed_tables - cls.soft_delete_tables):
+            column = rf"`?{re.escape(table)}`?\.`?is_deleted`?"
+            condition = rf"{column}\s*=\s*(?:0|false)"
+            sql = re.sub(rf"\s+AND\s+{condition}", "", sql, flags=re.IGNORECASE)
+            sql = re.sub(rf"{condition}\s+AND\s+", "", sql, flags=re.IGNORECASE)
+            sql = re.sub(rf"\bWHERE\s+{condition}\s*$", "", sql, flags=re.IGNORECASE)
+            sql = re.sub(
+                rf"\bWHERE\s+{condition}\s+(GROUP\s+BY|HAVING|ORDER\s+BY|LIMIT)\b",
+                r"\1",
+                sql,
+                flags=re.IGNORECASE,
+            )
+        return re.sub(r"\s+", " ", sql).strip()
 
     @classmethod
     def _validate_sql(cls, sql: str) -> None:

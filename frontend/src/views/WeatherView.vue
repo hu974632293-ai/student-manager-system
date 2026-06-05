@@ -54,10 +54,10 @@ async function query() {
           <h3>天气查询</h3>
           <p>按城市或经纬度调用后端天气接口，结果直接展示在页面。</p>
         </div>
-        <el-button type="primary" :loading="loading" @click="query">查询</el-button>
+        <el-button type="primary" native-type="submit" :loading="loading" @click="query">查询</el-button>
       </div>
 
-      <el-form label-position="top">
+      <el-form label-position="top" @submit.prevent="query" @keydown.enter.prevent="query">
         <el-form-item label="查询方式">
           <el-radio-group v-model="form.mode">
             <el-radio-button label="city">城市</el-radio-button>
@@ -65,7 +65,7 @@ async function query() {
           </el-radio-group>
         </el-form-item>
         <el-form-item v-if="form.mode === 'city'" label="城市">
-          <el-input v-model="form.city" placeholder="例如：北京、上海、杭州" @keyup.enter="query" />
+          <el-input v-model="form.city" placeholder="例如：北京、上海、杭州" />
         </el-form-item>
         <div v-else class="form-grid">
           <el-form-item label="纬度">
