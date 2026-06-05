@@ -41,7 +41,10 @@ const total = ref(0);
 const page = ref(1);
 const pageSize = ref(10);
 const dialogVisible = ref(false);
+const detailVisible = ref(false);
 const editingRow = ref<Row | null>(null);
+const detailRow = ref<Row | null>(null);
+const searchKeyword = ref("");
 const form = reactive<Row>({});
 
 function toQuery(data: Row) {
@@ -251,6 +254,11 @@ const configs: Record<string, ModuleConfig> = {
 const moduleKey = computed(() => String(route.meta.module || ""));
 const config = computed(() => configs[moduleKey.value]);
 const canWrite = computed(() => Boolean(config.value?.writePermission && auth.permissions.includes(config.value.writePermission)));
+const filteredRows = computed(() => {
+  const keyword = searchKeyword.value.trim().toLowerCase();
+  if (!keyword) return rows.value;
+  return rows.value.filter((row) => JSON.stringify(row).toLowerCase().includes(keyword));
+});
 const visibleFields = computed(() =>
   (config.value?.fields || []).filter((field) => {
     if (editingRow.value && field.createOnly) return false;
@@ -342,6 +350,11 @@ function copyJson(row: Row) {
   ElMessage.success("已复制");
 }
 
+function openDetail(row: Row) {
+  detailRow.value = row;
+  detailVisible.value = true;
+}
+
 watch(
   () => route.path,
   () => {
@@ -360,12 +373,13 @@ watch(
         <p>{{ config?.description }}</p>
       </div>
       <div class="toolbar-actions">
+        <el-input v-model="searchKeyword" clearable placeholder="筛选当前页数据" style="width: 220px" />
         <el-button :loading="loading" @click="load">刷新</el-button>
         <el-button v-if="canWrite && config?.create" type="primary" @click="openCreate">新增</el-button>
       </div>
     </div>
 
-    <el-table :data="rows" border stripe v-loading="loading" height="560">
+    <el-table :data="filteredRows" border stripe v-loading="loading" height="560" empty-text="暂无数据">
       <el-table-column
         v-for="column in config?.columns"
         :key="column.key"
@@ -376,6 +390,7 @@ watch(
       />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
+          <el-button link type="primary" @click="openDetail(row)">详情</el-button>
           <el-button link type="primary" @click="copyJson(row)">复制</el-button>
           <el-button v-if="canWrite && config?.update" link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button v-if="canWrite && config?.remove" link type="danger" @click="remove(row)">删除</el-button>
@@ -434,5 +449,13 @@ watch(
         <el-button type="primary" :loading="saving" @click="save">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-drawer v-model="detailVisible" title="记录详情" size="520px">
+      <el-descriptions v-if="detailRow" :column="1" border>
+        <el-descriptions-item v-for="(value, key) in detailRow" :key="String(key)" :label="String(key)">
+          {{ value ?? "-" }}
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-drawer>
   </section>
 </template>

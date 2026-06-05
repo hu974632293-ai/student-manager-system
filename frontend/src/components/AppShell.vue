@@ -4,8 +4,9 @@ import { User } from "@element-plus/icons-vue";
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import { roleLabels, roleModules } from "@/permissions";
+import { findModule, groupLabels, roleLabels, roleModules } from "@/permissions";
 import { useAuthStore } from "@/stores/auth";
+import type { MenuModule } from "@/types";
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -13,7 +14,19 @@ const route = useRoute();
 
 const menus = computed(() => roleModules(auth.role, auth.modules));
 const activePath = computed(() => route.path);
-const current = computed(() => menus.value.find((item) => item.route === route.path) || menus.value[0]);
+const current = computed(() => findModule(route.meta.module as string) || menus.value[0]);
+const topMenus = computed(() => menus.value.filter((item) => !item.group));
+const groupedMenus = computed(() => {
+  const groups: Record<string, MenuModule[]> = {};
+  menus.value
+    .filter((item) => item.group)
+    .forEach((item) => {
+      const group = item.group || "tools";
+      groups[group] = groups[group] || [];
+      groups[group].push(item);
+    });
+  return groups;
+});
 
 function icon(name: string) {
   return (Icons as Record<string, unknown>)[name];
@@ -27,20 +40,31 @@ function logout() {
 
 <template>
   <el-container class="shell">
-    <el-aside class="sidebar" width="248px">
+    <el-aside class="sidebar" width="252px">
       <div class="brand">
-        <div class="brand-mark">沃</div>
+        <div class="brand-mark">管</div>
         <div>
           <h1>学生管理系统</h1>
-          <p>角色权限工作台</p>
+          <p>教务与工具工作台</p>
         </div>
       </div>
       <el-scrollbar>
         <el-menu :default-active="activePath" router class="menu">
-          <el-menu-item v-for="item in menus" :key="item.key" :index="item.route">
+          <el-menu-item v-for="item in topMenus" :key="item.key" :index="item.route">
             <el-icon><component :is="icon(item.icon)" /></el-icon>
             <span>{{ item.title }}</span>
           </el-menu-item>
+
+          <el-sub-menu v-for="(items, group) in groupedMenus" :key="group" :index="String(group)">
+            <template #title>
+              <el-icon><component :is="icon(group === 'business' ? 'School' : 'Tools')" /></el-icon>
+              <span>{{ groupLabels[group as keyof typeof groupLabels] }}</span>
+            </template>
+            <el-menu-item v-for="item in items" :key="item.key" :index="item.route">
+              <el-icon><component :is="icon(item.icon)" /></el-icon>
+              <span>{{ item.title }}</span>
+            </el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-scrollbar>
     </el-aside>

@@ -17,6 +17,9 @@ export default defineConfig(({ command }) => ({
       "^/(auth|students|classes|teacher|score|employment|jobs|statistics|ai|logs|letters|weather|data-query)": {
         target: "http://127.0.0.1:8088",
         changeOrigin: true,
+        bypass(req) {
+          if (req.headers.accept?.includes("text/html")) return "/index.html";
+        },
       },
     },
   },

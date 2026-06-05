@@ -30,6 +30,8 @@ export interface MenuModule {
   route: string;
   icon: string;
   roles: Role[];
+  group?: "business" | "tools";
+  hidden?: boolean;
 }
 
 export interface TableColumn {

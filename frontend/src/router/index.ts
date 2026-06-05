@@ -53,8 +53,26 @@ const routes: RouteRecordRaw[] = [
       {
         path: "statistics",
         name: "statistics",
-        component: () => import("@/views/ModuleListView.vue"),
+        component: () => import("@/views/StatisticsView.vue"),
         meta: { module: "statistics" },
+      },
+      {
+        path: "letters",
+        name: "letters",
+        component: () => import("@/views/LetterView.vue"),
+        meta: { module: "letters" },
+      },
+      {
+        path: "weather",
+        name: "weather",
+        component: () => import("@/views/WeatherView.vue"),
+        meta: { module: "weather" },
+      },
+      {
+        path: "geocode",
+        name: "geocode",
+        component: () => import("@/views/GeocodeView.vue"),
+        meta: { module: "geocode" },
       },
       {
         path: "logs",
@@ -89,7 +107,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: "permissions",
         name: "permissions",
-        component: () => import("@/views/WorkbenchView.vue"),
+        component: () => import("@/views/PermissionsView.vue"),
         meta: { module: "permissions" },
       },
       {
@@ -118,7 +136,7 @@ router.beforeEach(async (to) => {
     return true;
   }
   if (!auth.token) return "/login";
-  if (!auth.user) {
+  if (!auth.user || !auth.loadedFromServer) {
     try {
       await auth.fetchMe();
     } catch {

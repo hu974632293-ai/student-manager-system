@@ -176,6 +176,10 @@ a {
   color: #cbd5e1;
 }
 
+.menu .el-sub-menu__title {
+  color: #cbd5e1;
+}
+
 .topbar {
   height: 76px;
   display: flex;
@@ -244,6 +248,10 @@ a {
   gap: 16px;
 }
 
+.metric-grid.dense {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .metric-card,
 .module-card,
 .page-surface,
@@ -278,6 +286,151 @@ a {
 .module-card strong {
   display: block;
   margin-bottom: 8px;
+}
+
+.bi-grid,
+.dashboard-bottom,
+.tool-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.bi-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-bottom {
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+}
+
+.tool-layout {
+  grid-template-columns: minmax(0, 1fr) 420px;
+  align-items: start;
+}
+
+.chart-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #dfe6ee;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.card-title h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.card-title a,
+.card-title span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.chart-box {
+  height: 300px;
+}
+
+.risk-grid,
+.shortcut-grid,
+.form-grid,
+.weather-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.risk-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.risk-grid div,
+.shortcut-card,
+.weather-card,
+.memory-card {
+  padding: 14px;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.risk-grid span,
+.shortcut-card span,
+.weather-card span {
+  display: block;
+  color: #64748b;
+}
+
+.risk-grid strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+}
+
+.shortcut-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shortcut-card strong,
+.weather-card strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.result-pre {
+  margin: 14px 0 0;
+  padding: 12px;
+  overflow: auto;
+  max-height: 420px;
+  white-space: pre-wrap;
+  color: #dbeafe;
+  background: #111827;
+  border-radius: 8px;
+  line-height: 1.6;
+}
+
+.compact-pre {
+  max-height: 240px;
+}
+
+.empty-state.compact {
+  min-height: 120px;
+  text-align: center;
+}
+
+.side-actions,
+.memory-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.memory-side {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.memory-card p {
+  margin: 0 0 8px;
+  line-height: 1.6;
+}
+
+.placeholder-panel.unavailable {
+  max-width: 760px;
+  margin: 40px auto;
+  text-align: center;
 }
 
 .page-surface {
@@ -467,7 +620,10 @@ a {
   .login-page,
   .hero-card,
   .ai-workbench,
-  .data-query-page {
+  .data-query-page,
+  .bi-grid,
+  .dashboard-bottom,
+  .tool-layout {
     grid-template-columns: 1fr;
   }
 
@@ -476,7 +632,9 @@ a {
   }
 
   .metric-grid,
-  .module-grid {
+  .metric-grid.dense,
+  .module-grid,
+  .shortcut-grid {
     grid-template-columns: 1fr;
   }
 }

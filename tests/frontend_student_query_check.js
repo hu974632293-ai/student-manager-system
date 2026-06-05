@@ -2,25 +2,21 @@ const fs = require("fs");
 const path = require("path");
 
 const root = path.resolve(__dirname, "..");
-const appSource = fs.readFileSync(path.join(root, "frontend", "app.js"), "utf8");
-const htmlSource = fs.readFileSync(path.join(root, "frontend", "index.html"), "utf8");
+const source = fs.readFileSync(path.join(root, "frontend", "src", "views", "ModuleListView.vue"), "utf8");
 
-function assertIncludes(source, text, message) {
-    if (!source.includes(text)) {
-        throw new Error(message);
-    }
+function assertIncludes(text, message) {
+  if (!source.includes(text)) throw new Error(message);
 }
 
-assertIncludes(appSource, "this.rows = this.flattenStudentQuery(data);", "student exact query should refresh table rows");
-assertIncludes(appSource, "this.pager.total = this.rows.length;", "student exact query should sync table total");
-assertIncludes(appSource, "this.pager.page = 1;", "student exact query should reset page");
-assertIncludes(appSource, "if (!this.studentExact.student_id && !this.studentExact.student_name && !this.studentExact.class_id)", "empty exact query should return to paged list");
-assertIncludes(appSource, "this.studentExact = { student_id: \"\", student_name: \"\", class_id: \"\" };", "reset should clear exact query fields");
-assertIncludes(appSource, "if (group) return [group];", "student query result should support single objects");
-assertIncludes(appSource, "const data = await this.request(\"/students?skip=0&limit=10000\");", "student list filters should use list data");
-assertIncludes(appSource, "this.rows = this.filterStudentRows(data.students || []);", "student list filters should refresh table rows");
-assertIncludes(appSource, "filterStudentRows(students)", "missing student list filter method");
-assertIncludes(appSource, "String(item.student_id || \"\").includes(studentId)", "student id filter should support contains matching");
-assertIncludes(appSource, "String(item.name || \"\").includes(name)", "student name filter should support contains matching");
-assertIncludes(appSource, "if (classId && String(item.class_id || \"\") !== classId) return false;", "class id filter should use exact matching");
-assertIncludes(htmlSource, "v-if=\"activeModule !== 'students'\"", "student module should hide the duplicate generic filter row");
+assertIncludes("searchKeyword", "业务列表页缺少当前页筛选状态");
+assertIncludes("filteredRows", "业务列表页缺少筛选后的表格数据");
+assertIncludes("detailVisible", "业务列表页缺少详情抽屉状态");
+assertIncludes("openDetail(row)", "业务列表页缺少详情入口");
+assertIncludes("/students?skip=", "学生列表未绑定分页接口");
+assertIncludes("/students", "学生新增接口未绑定");
+assertIncludes("/update_student/", "学生编辑接口未绑定");
+assertIncludes("/students_delete/", "学生删除接口未绑定");
+assertIncludes("/teacher/list", "教师列表接口未绑定");
+assertIncludes("/classes/?page=", "班级列表接口未绑定");
+assertIncludes("/score/query/", "成绩列表接口未绑定");
+assertIncludes("/jobs/page", "就业列表接口未绑定");

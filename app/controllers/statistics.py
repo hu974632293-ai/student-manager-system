@@ -11,6 +11,14 @@ from app.services.statistics_service import StatisticsService
 statistics_router = APIRouter(prefix="/statistics", tags=["statistics"])
 
 
+@statistics_router.get("/dashboard", summary="查询总览看板统计数据")
+def get_dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
+):
+    return StatisticsService.get_dashboard_summary(db, current_user=current_user)
+
+
 @statistics_router.get("/students/over-30", summary="统计年龄大于指定值的学生")
 def get_students_over_30(
     min_age: int = Query(30, ge=0),

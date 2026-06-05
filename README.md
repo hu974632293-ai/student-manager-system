@@ -47,6 +47,13 @@ npm run build
 
 After build, FastAPI serves `frontend/dist/index.html` and static assets under `/frontend`. If `frontend/dist` does not exist, FastAPI falls back to the source `frontend/index.html`, which is intended for Vite development rather than direct browser use.
 
+First-version frontend coverage:
+
+- `总览`: BI dashboard backed by `GET /statistics/dashboard`.
+- `教务管理`: student, class, teacher, score, employment, and statistics pages.
+- `系统工具`: email sending, weather query, geocode query, AI chat, data query, logs, and permission matrix.
+- `知识库` and `智能体`: kept as safe "not open yet" placeholder routes until their complete business workflows are implemented.
+
 ## API Response
 
 Backend APIs return a unified structure:
@@ -194,9 +201,12 @@ Send request adds email fields:
   "topic": "请假说明",
   "method": "generate",
   "to_email": "teacher@example.com",
-  "subject": "请假说明"
+  "subject": "请假说明",
+  "content": "optional direct email body"
 }
 ```
+
+When `content` is provided, `/letters/send` sends that body directly. When `content` is omitted, it generates the letter with Ollama before sending.
 
 Configure Ollama and SMTP with environment variables:
 

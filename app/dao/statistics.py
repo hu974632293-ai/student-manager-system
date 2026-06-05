@@ -7,6 +7,7 @@ from app.models.classes import Class
 from app.models.job import StudentJob
 from app.models.score import StudentScore
 from app.models.student import Student
+from app.models.teacher import Teacher
 
 
 class StatisticsDao:
@@ -119,7 +120,7 @@ class StatisticsDao:
             StudentJob.class_name,
             StudentJob.job_open_date,
             StudentJob.offer_date,
-            (func.julianday(StudentJob.offer_date) - func.julianday(StudentJob.job_open_date)).label("duration_days"),
+            func.datediff(StudentJob.offer_date, StudentJob.job_open_date).label("duration_days"),
         )
         query = self._filter_job_student_ids(query, allowed_student_ids)
         class_name = self._clean_optional_text(class_name)
@@ -128,13 +129,97 @@ class StatisticsDao:
         return query.all()
 
     def get_class_average_employment_duration(self, db: Session, class_name: Optional[str] = None, allowed_student_ids: Optional[list[str]] = None):
-        duration = func.julianday(StudentJob.offer_date) - func.julianday(StudentJob.job_open_date)
+        duration = func.datediff(StudentJob.offer_date, StudentJob.job_open_date)
         query = db.query(StudentJob.class_name, func.avg(duration).label("average_duration_days"))
         query = self._filter_job_student_ids(query, allowed_student_ids)
         class_name = self._clean_optional_text(class_name)
         if class_name:
             query = query.filter(StudentJob.class_name == class_name)
         return query.group_by(StudentJob.class_name).all()
+
+    def get_dashboard_summary(self, db: Session, allowed_student_ids: Optional[list[str]] = None):
+        student_query = db.query(Student).filter(Student.is_deleted == False)
+        student_query = self._filter_student_ids(student_query, allowed_student_ids)
+
+        score_query = db.query(StudentScore).join(Student, StudentScore.student_id == Student.student_id).filter(Student.is_deleted == False)
+        score_query = self._filter_student_ids(score_query, allowed_student_ids)
+
+        job_query = db.query(StudentJob)
+        job_query = self._filter_job_student_ids(job_query, allowed_student_ids)
+
+        class_query = db.query(Class).filter(Class.is_deleted == False)
+        if allowed_student_ids is not None:
+            class_ids = [row[0] for row in student_query.with_entities(Student.class_id).distinct().all()]
+            class_query = class_query.filter(Class.id.in_(class_ids)) if class_ids else class_query.filter(False)
+
+        class_distribution = (
+            student_query.with_entities(Class.class_id.label("class_id"), func.count(Student.id).label("student_count"))
+            .join(Class, Student.class_id == Class.id)
+            .group_by(Class.class_id)
+            .order_by(func.count(Student.id).desc())
+            .limit(8)
+            .all()
+        )
+        employment_distribution = (
+            job_query.with_entities(StudentJob.company_name, func.count(StudentJob.id).label("job_count"))
+            .filter(StudentJob.company_name.isnot(None), StudentJob.company_name != "")
+            .group_by(StudentJob.company_name)
+            .order_by(func.count(StudentJob.id).desc())
+            .limit(8)
+            .all()
+        )
+        score_trends = (
+            score_query.with_entities(StudentScore.exam_round, func.avg(StudentScore.score).label("average_score"))
+            .filter(StudentScore.score.isnot(None))
+            .group_by(StudentScore.exam_round)
+            .order_by(StudentScore.exam_round.asc())
+            .limit(12)
+            .all()
+        )
+        recent_students = (
+            student_query.with_entities(Student.student_id, Student.name, Student.class_id, Student.major, Student.enrollment_date)
+            .order_by(Student.id.desc())
+            .limit(8)
+            .all()
+        )
+
+        return {
+            "totals": {
+                "students": student_query.count(),
+                "teachers": db.query(Teacher).filter(Teacher.is_deleted == False).count(),
+                "classes": class_query.count(),
+                "scores": score_query.count(),
+                "employment": job_query.count(),
+            },
+            "score_overview": {
+                "average_score": round(float(score_query.with_entities(func.avg(StudentScore.score)).scalar() or 0), 2),
+                "low_score_count": score_query.filter(StudentScore.score < 60).count(),
+                "excellent_score_count": score_query.filter(StudentScore.score >= 90).count(),
+            },
+            "employment_overview": {
+                "average_salary": round(float(job_query.with_entities(func.avg(StudentJob.salary)).scalar() or 0), 2),
+                "top_salary": round(float(job_query.with_entities(func.max(StudentJob.salary)).scalar() or 0), 2),
+            },
+            "class_distribution": [
+                {"class_id": item.class_id, "student_count": int(item.student_count or 0)} for item in class_distribution
+            ],
+            "employment_distribution": [
+                {"company_name": item.company_name, "job_count": int(item.job_count or 0)} for item in employment_distribution
+            ],
+            "score_trends": [
+                {"exam_round": item.exam_round, "average_score": round(float(item.average_score or 0), 2)} for item in score_trends
+            ],
+            "recent_students": [
+                {
+                    "student_id": item.student_id,
+                    "name": item.name,
+                    "class_id": item.class_id,
+                    "major": item.major,
+                    "enrollment_date": item.enrollment_date,
+                }
+                for item in recent_students
+            ],
+        }
 
 
 statistics_dao = StatisticsDao()

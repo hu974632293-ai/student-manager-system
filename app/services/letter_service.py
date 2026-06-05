@@ -39,7 +39,7 @@ class LetterService:
     @staticmethod
     def send_letter(payload: LetterSendRequest):
         try:
-            content = LetterService._generate_letter_content(payload)
+            content = payload.content.strip() if payload.content else LetterService._generate_letter_content(payload)
             subject = payload.subject or f"写给{RECIPIENT_NAMES[payload.recipient]}的一封信"
             send_email(str(payload.to_email), subject, content)
             return success(

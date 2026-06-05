@@ -1,52 +1,223 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import * as echarts from "echarts";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
-import { roleLabels, roleModules } from "@/permissions";
+import { notifyError, request } from "@/api/http";
+import { roleModules } from "@/permissions";
 import { useAuthStore } from "@/stores/auth";
-import heroImage from "../../assets/dashboard-hero.png";
+
+interface DashboardSummary {
+  totals: {
+    students: number;
+    teachers: number;
+    classes: number;
+    scores: number;
+    employment: number;
+  };
+  score_overview: {
+    average_score: number;
+    low_score_count: number;
+    excellent_score_count: number;
+  };
+  employment_overview: {
+    average_salary: number;
+    top_salary: number;
+  };
+  class_distribution: { class_id: string; student_count: number }[];
+  employment_distribution: { company_name: string; job_count: number }[];
+  score_trends: { exam_round: number; average_score: number }[];
+  recent_students: Record<string, unknown>[];
+}
 
 const auth = useAuthStore();
-const modules = computed(() => roleModules(auth.role, auth.modules));
-const identity = computed(() => {
-  if (!auth.user) return "未绑定";
-  if (auth.user.role === "teacher") return auth.user.teacher_id ? `教师ID ${auth.user.teacher_id}` : "未绑定教师身份";
-  if (auth.user.role === "student") return auth.user.student_id ? `学号 ${auth.user.student_id}` : "未绑定学生身份";
-  if (auth.user.role === "consultant") return auth.user.teacher_id ? `顾问ID ${auth.user.teacher_id}` : "未绑定顾问身份";
-  return "全量数据权限";
+const loading = ref(false);
+const summary = ref<DashboardSummary | null>(null);
+const classChart = ref<HTMLDivElement>();
+const scoreChart = ref<HTMLDivElement>();
+const employmentChart = ref<HTMLDivElement>();
+let charts: echarts.ECharts[] = [];
+
+const shortcuts = computed(() =>
+  roleModules(auth.role, auth.modules).filter((item) =>
+    ["students", "scores", "employment", "statistics", "letters", "weather", "geocode"].includes(item.key),
+  ),
+);
+
+const metrics = computed(() => {
+  const data = summary.value;
+  return [
+    { label: "学生总数", value: data?.totals.students ?? 0, route: "/students" },
+    { label: "教师总数", value: data?.totals.teachers ?? 0, route: "/teachers" },
+    { label: "班级总数", value: data?.totals.classes ?? 0, route: "/classes" },
+    { label: "成绩记录", value: data?.totals.scores ?? 0, route: "/scores" },
+    { label: "就业记录", value: data?.totals.employment ?? 0, route: "/employment" },
+    { label: "平均成绩", value: data?.score_overview.average_score ?? 0, route: "/statistics" },
+  ];
+});
+
+async function load() {
+  loading.value = true;
+  try {
+    summary.value = await request<DashboardSummary>("/statistics/dashboard");
+    await nextTick();
+    renderCharts();
+  } catch (error) {
+    notifyError(error);
+  } finally {
+    loading.value = false;
+  }
+}
+
+function renderCharts() {
+  charts.forEach((chart) => chart.dispose());
+  charts = [];
+  if (!summary.value) return;
+
+  if (classChart.value) {
+    const chart = echarts.init(classChart.value);
+    chart.setOption({
+      tooltip: { trigger: "axis" },
+      grid: { left: 36, right: 18, top: 28, bottom: 42 },
+      xAxis: { type: "category", data: summary.value.class_distribution.map((item) => item.class_id) },
+      yAxis: { type: "value" },
+      series: [{ type: "bar", data: summary.value.class_distribution.map((item) => item.student_count), itemStyle: { color: "#0f766e" } }],
+    });
+    charts.push(chart);
+  }
+
+  if (scoreChart.value) {
+    const chart = echarts.init(scoreChart.value);
+    chart.setOption({
+      tooltip: { trigger: "axis" },
+      grid: { left: 36, right: 18, top: 28, bottom: 42 },
+      xAxis: { type: "category", data: summary.value.score_trends.map((item) => `第${item.exam_round}轮`) },
+      yAxis: { type: "value", min: 0, max: 100 },
+      series: [{ type: "line", smooth: true, data: summary.value.score_trends.map((item) => item.average_score), itemStyle: { color: "#2563eb" } }],
+    });
+    charts.push(chart);
+  }
+
+  if (employmentChart.value) {
+    const chart = echarts.init(employmentChart.value);
+    chart.setOption({
+      tooltip: { trigger: "item" },
+      series: [
+        {
+          type: "pie",
+          radius: ["42%", "72%"],
+          data: summary.value.employment_distribution.map((item) => ({ name: item.company_name, value: item.job_count })),
+        },
+      ],
+    });
+    charts.push(chart);
+  }
+}
+
+function resizeCharts() {
+  charts.forEach((chart) => chart.resize());
+}
+
+onMounted(() => {
+  load();
+  window.addEventListener("resize", resizeCharts);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", resizeCharts);
+  charts.forEach((chart) => chart.dispose());
 });
 </script>
 
 <template>
-  <section class="dashboard">
-    <div class="hero-card">
+  <section class="dashboard" v-loading="loading">
+    <div class="section-heading">
       <div>
-        <p class="eyebrow">ACCESS CONTROL</p>
-        <h1>{{ auth.user?.real_name || auth.user?.username }}</h1>
-        <span>{{ auth.role ? roleLabels[auth.role] : "用户" }} · {{ identity }}</span>
+        <h3>运营总览</h3>
+        <p>基于当前角色可访问数据生成，不使用前端假数据。</p>
       </div>
-      <img :src="heroImage" alt="数据看板" />
+      <el-button :loading="loading" @click="load">刷新</el-button>
     </div>
 
-    <div class="metric-grid">
-      <article class="metric-card">
-        <span>可访问模块</span>
-        <strong>{{ modules.length }}</strong>
-      </article>
-      <article class="metric-card">
-        <span>权限点</span>
-        <strong>{{ auth.permissions.length }}</strong>
-      </article>
-      <article class="metric-card">
-        <span>数据范围</span>
-        <strong>{{ auth.role === "admin" ? "全量" : "受限" }}</strong>
-      </article>
-    </div>
-
-    <div class="module-grid">
-      <RouterLink v-for="item in modules" :key="item.key" class="module-card" :to="item.route">
-        <strong>{{ item.title }}</strong>
-        <span>{{ item.subtitle }}</span>
+    <div class="metric-grid dense">
+      <RouterLink v-for="item in metrics" :key="item.label" class="metric-card" :to="item.route">
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
       </RouterLink>
+    </div>
+
+    <div class="bi-grid">
+      <article class="chart-card">
+        <div class="card-title">
+          <h4>班级人数分布</h4>
+          <RouterLink to="/classes">进入班级管理</RouterLink>
+        </div>
+        <div ref="classChart" class="chart-box" />
+      </article>
+      <article class="chart-card">
+        <div class="card-title">
+          <h4>成绩趋势</h4>
+          <RouterLink to="/scores">进入成绩管理</RouterLink>
+        </div>
+        <div ref="scoreChart" class="chart-box" />
+      </article>
+      <article class="chart-card">
+        <div class="card-title">
+          <h4>就业去向统计</h4>
+          <RouterLink to="/employment">进入就业管理</RouterLink>
+        </div>
+        <div ref="employmentChart" class="chart-box" />
+      </article>
+      <article class="chart-card risk-panel">
+        <div class="card-title">
+          <h4>风险与机会</h4>
+          <RouterLink to="/statistics">查看统计分析</RouterLink>
+        </div>
+        <div class="risk-grid">
+          <div>
+            <span>低分记录</span>
+            <strong>{{ summary?.score_overview.low_score_count ?? 0 }}</strong>
+          </div>
+          <div>
+            <span>优秀记录</span>
+            <strong>{{ summary?.score_overview.excellent_score_count ?? 0 }}</strong>
+          </div>
+          <div>
+            <span>平均薪资</span>
+            <strong>{{ summary?.employment_overview.average_salary ?? 0 }}</strong>
+          </div>
+          <div>
+            <span>最高薪资</span>
+            <strong>{{ summary?.employment_overview.top_salary ?? 0 }}</strong>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="dashboard-bottom">
+      <article class="page-surface">
+        <div class="card-title">
+          <h4>近期学生</h4>
+          <RouterLink to="/students">查看学生</RouterLink>
+        </div>
+        <el-table :data="summary?.recent_students || []" border height="300">
+          <el-table-column prop="student_id" label="学号" width="130" />
+          <el-table-column prop="name" label="姓名" width="120" />
+          <el-table-column prop="class_id" label="班级ID" width="110" />
+          <el-table-column prop="major" label="专业" min-width="160" show-overflow-tooltip />
+        </el-table>
+      </article>
+      <article class="page-surface">
+        <div class="card-title">
+          <h4>快捷入口</h4>
+          <span>按当前角色展示</span>
+        </div>
+        <div class="shortcut-grid">
+          <RouterLink v-for="item in shortcuts" :key="item.key" :to="item.route" class="shortcut-card">
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.subtitle }}</span>
+          </RouterLink>
+        </div>
+      </article>
     </div>
   </section>
 </template>

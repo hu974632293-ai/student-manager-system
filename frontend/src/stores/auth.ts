@@ -8,6 +8,7 @@ const USER_KEY = "wolin_user";
 interface AuthState {
   token: string;
   user: UserProfile | null;
+  loadedFromServer: boolean;
 }
 
 function loadStoredUser(): UserProfile | null {
@@ -26,6 +27,7 @@ export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
     token: localStorage.getItem("wolin_token") || "",
     user: loadStoredUser(),
+    loadedFromServer: false,
   }),
   getters: {
     isAuthenticated: (state) => Boolean(state.token && state.user),
@@ -41,18 +43,21 @@ export const useAuthStore = defineStore("auth", {
       });
       this.token = data.access_token;
       this.user = data.user;
+      this.loadedFromServer = true;
       setToken(data.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     },
     async fetchMe() {
       const user = await request<UserProfile>("/auth/me");
       this.user = user;
+      this.loadedFromServer = true;
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       return user;
     },
     logout() {
       this.token = "";
       this.user = null;
+      this.loadedFromServer = false;
       clearToken();
       localStorage.removeItem(USER_KEY);
     },

@@ -2,25 +2,19 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 
-import { modules } from "@/permissions";
+import { findModule } from "@/permissions";
 
 const route = useRoute();
-const current = computed(() => modules.find((item) => item.key === route.meta.module));
+const current = computed(() => findModule(route.meta.module as string));
 </script>
 
 <template>
-  <section class="ai-workbench">
-    <aside class="workbench-side">
-      <h3>{{ current?.title }}</h3>
-      <p>{{ current?.subtitle }}</p>
-    </aside>
-    <main class="placeholder-panel">
-      <h2>{{ current?.title }}工作台</h2>
-      <p>前端路由、菜单权限和页面结构已就位，等待后端具体接口接入。</p>
-    </main>
-    <aside class="workbench-side">
-      <h3>权限</h3>
-      <p>页面入口由 Vue Router 守卫控制，接口仍由后端角色依赖兜底。</p>
-    </aside>
+  <section class="placeholder-panel unavailable">
+    <h2>{{ current?.title || "功能" }}暂未开放</h2>
+    <p>
+      当前第一版先保证教务管理、统计分析、系统工具和普通 AI 问答跑通。
+      {{ current?.title || "该功能" }}完整业务能力暂缓开发，后续补齐时会接入真实接口和权限校验。
+    </p>
+    <RouterLink to="/dashboard">返回总览</RouterLink>
   </section>
 </template>
