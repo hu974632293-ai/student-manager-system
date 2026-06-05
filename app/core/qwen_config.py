@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 DEFAULT_QWEN_BASE_URL = "https://dashscope.aliyuncs.com/api/v1"
 DEFAULT_QWEN_TEXT_MODEL = "qwen-plus"
 DEFAULT_QWEN_IMAGE_MODEL = "qwen-image-2.0-pro"
+DEFAULT_QWEN_EMBEDDING_MODEL = "text-embedding-v3"
 DEFAULT_QWEN_TIMEOUT_SECONDS = 30
 
 
@@ -19,6 +20,7 @@ class QwenConfig:
     api_key: str | None
     text_model: str
     image_model: str
+    embedding_model: str
     base_url: str
     timeout_seconds: int
 
@@ -37,6 +39,7 @@ class QwenConfig:
             api_key=os.getenv("QWEN_API_KEY") or os.getenv("DASHSCOPE_API_KEY"),
             text_model=os.getenv("QWEN_TEXT_MODEL") or os.getenv("AI_CHAT_MODEL") or DEFAULT_QWEN_TEXT_MODEL,
             image_model=os.getenv("QWEN_IMAGE_MODEL", DEFAULT_QWEN_IMAGE_MODEL),
+            embedding_model=os.getenv("QWEN_EMBEDDING_MODEL", DEFAULT_QWEN_EMBEDDING_MODEL),
             base_url=os.getenv("QWEN_BASE_URL", DEFAULT_QWEN_BASE_URL).rstrip("/"),
             timeout_seconds=timeout_seconds,
         )

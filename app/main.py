@@ -21,6 +21,7 @@ from app.controllers.weather import weather_router
 from app.core.logger import get_logger
 from app.core.logging_middleware import RequestLoggingMiddleware
 from app.core.response import fail
+from app.core.schema_compat import ensure_ai_chat_schema_compat
 
 
 logger = get_logger("app")
@@ -75,6 +76,7 @@ async def exception_handler(request: Request, exc: Exception):
 def startup():
     logger.info("学生管理系统后端启动")
     ensure_default_users()
+    ensure_ai_chat_schema_compat()
 
 
 @app.get("/", summary="打开前端首页")

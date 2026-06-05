@@ -1,3 +1,5 @@
+import json
+import logging
 import os
 import uuid
 
@@ -7,20 +9,71 @@ from sqlalchemy.orm import Session
 from app.core.qwen_client import QwenClient, QwenRequestError, QwenResponseError
 from app.core.qwen_config import QwenConfigError
 from app.core.response import fail, success
+from app.core.token_estimator import TokenEstimator
 from app.dao.ai_chat import ai_chat_dao
+from app.services.ai_chat_compressor import ContextCompressor
+from app.services.ai_chat_retriever import SemanticRetriever
+from app.services.ai_chat_summarizer import SessionSummarizer
 from app.views.schemas.ai_chat import AiChatRequest
+
+logger = logging.getLogger(__name__)
 
 
 class AiChatService:
+    # ── 配置 ─────────────────────────────────
     context_limit = max(1, int(os.getenv("AI_CHAT_CONTEXT_LIMIT", "10")))
     memory_limit = max(1, int(os.getenv("AI_CHAT_MEMORY_LIMIT", "10")))
-    client: QwenClient | None = None
+    max_tokens = max(1000, int(os.getenv("AI_CHAT_MAX_TOKENS", "6000")))
+    compression_threshold = max(100, int(os.getenv("AI_CHAT_COMPRESSION_THRESHOLD", "4000")))
+    retrieval_top_k = max(1, int(os.getenv("AI_CHAT_RETRIEVAL_TOP_K", "5")))
+    retrieval_threshold = max(0.0, min(1.0, float(os.getenv("AI_CHAT_RETRIEVAL_THRESHOLD", "0.65"))))
+    summary_min_messages = max(1, int(os.getenv("AI_CHAT_SUMMARY_MIN_MESSAGES", "20")))
 
-    @staticmethod
-    def get_client():
-        if AiChatService.client is None:
-            AiChatService.client = QwenClient()
-        return AiChatService.client
+    # ── 组件实例（懒加载单例）─────────────────
+    client: QwenClient | None = None
+    _summarizer: SessionSummarizer | None = None
+    _compressor: ContextCompressor | None = None
+    _retriever: SemanticRetriever | None = None
+
+    # ═══════════════════════════════════════════
+    #  组件初始化
+    # ═══════════════════════════════════════════
+
+    @classmethod
+    def get_client(cls) -> QwenClient:
+        if cls.client is None:
+            cls.client = QwenClient()
+        return cls.client
+
+    @classmethod
+    def _get_summarizer(cls) -> SessionSummarizer:
+        if cls._summarizer is None:
+            cls._summarizer = SessionSummarizer(cls.get_client())
+        return cls._summarizer
+
+    @classmethod
+    def _get_compressor(cls) -> ContextCompressor:
+        if cls._compressor is None:
+            summarizer = cls._summarizer if cls._summarizer else cls._get_summarizer()
+            cls._compressor = ContextCompressor(
+                compression_threshold=cls.compression_threshold,
+                summarizer=summarizer,
+            )
+        return cls._compressor
+
+    @classmethod
+    def _get_retriever(cls) -> SemanticRetriever:
+        if cls._retriever is None:
+            cls._retriever = SemanticRetriever(
+                cls.get_client(),
+                top_k=cls.retrieval_top_k,
+                similarity_threshold=cls.retrieval_threshold,
+            )
+        return cls._retriever
+
+    # ═══════════════════════════════════════════
+    #  核心：chat()
+    # ═══════════════════════════════════════════
 
     @staticmethod
     def chat(db: Session, payload: AiChatRequest, current_user=None):
@@ -34,38 +87,223 @@ class AiChatService:
         try:
             user_id = current_user.id if current_user else None
             session = ai_chat_dao.get_session(db, session_id)
+
+            # 首次创建 session 时绑定 user_id
             if not session:
                 ai_chat_dao.create_session(db, session_id, title)
+                if user_id:
+                    ai_chat_dao.set_session_user(db, session_id, user_id)
+            elif user_id and not session.user_id:
+                ai_chat_dao.set_session_user(db, session_id, user_id)
 
-            history = ai_chat_dao.list_recent_messages(db, session_id, AiChatService.context_limit)
-            memories = ai_chat_dao.list_memories(db, user_id, AiChatService.memory_limit) if user_id else []
+            # ── 1. 获取会话摘要 ──
+            existing_summary = (
+                ai_chat_dao.get_session_summary(db, session_id) or ""
+            )
+
+            # ── 2. 获取最近消息（多取一些用于压缩决策） ──
+            fetch_limit = max(AiChatService.context_limit * 3, 30)
+            history_messages = ai_chat_dao.list_recent_messages(
+                db, session_id, fetch_limit
+            )
+            history_dicts = [
+                {"role": item.role, "content": item.content}
+                for item in history_messages
+            ]
+
+            # ── 3. 语义检索 ──
+            retrieval_context = ""
+            if user_id and content:
+                retrieval_context = AiChatService._run_retrieval(db, user_id, content)
+
+            # ── 4. 上下文压缩 ──
+            compressor = AiChatService._get_compressor()
+            compression_info = {"applied": False, "count": 0}
+            if compressor.needs_compression(history_dicts):
+                try:
+                    ctx = compressor.compress(
+                        history_dicts,
+                        existing_summary=existing_summary,
+                        session_summarizer=AiChatService._get_summarizer(),
+                    )
+                    history_dicts = ctx.recent_messages
+                    if ctx.session_summary != existing_summary and ctx.session_summary:
+                        ai_chat_dao.update_session_summary(
+                            db, session_id, ctx.session_summary
+                        )
+                        existing_summary = ctx.session_summary
+                    compression_info = {"applied": True, "count": ctx.summarized_count}
+                except Exception as exc:
+                    logger.warning("Context compression failed (will skip): %s", exc)
+
+            # ── 5. 获取长期记忆 ──
+            memories = (
+                ai_chat_dao.list_memories(db, user_id, AiChatService.memory_limit)
+                if user_id
+                else []
+            )
             saved_memory = AiChatService._extract_memory_content(content)
             if user_id and saved_memory:
                 memory = ai_chat_dao.create_memory(db, user_id, saved_memory, source="auto")
-                memories = ([memory] + [item for item in memories if item.id != memory.id])[: AiChatService.memory_limit]
+                memories = ([memory] + [m for m in memories if m.id != memory.id])[
+                    : AiChatService.memory_limit
+                ]
 
-            ai_chat_dao.create_message(db, session_id, "user", content)
+            # ── 6. 存储用户消息（记录 token_count） ──
+            user_token_count = TokenEstimator.estimate(content)
+            msg_user = ai_chat_dao.create_message(db, session_id, "user", content)
+            if msg_user.id:
+                # 直接在 DB 更新 token_count
+                from sqlalchemy import update as sa_update
+                from app.models.ai_chat import AiChatMessage as MsgModel
+                db.execute(
+                    sa_update(MsgModel)
+                    .where(MsgModel.id == msg_user.id)
+                    .values(token_count=user_token_count)
+                )
+                db.commit()
 
+            # ── 7. 构建 messages（system + history + current） ──
             messages = AiChatService._build_memory_messages(memories)
-            messages.extend({"role": item.role, "content": item.content} for item in history)
-            messages.append({"role": "user", "content": content})
-            reply = AiChatService.get_client().chat(messages)
 
-            ai_chat_dao.create_message(db, session_id, "assistant", reply)
+            # 会话摘要注入
+            if existing_summary:
+                messages.append({
+                    "role": "system",
+                    "content": f"当前会话摘要（仅参考历史背景，重点回应最新消息）：{existing_summary}",
+                })
+
+            # 检索结果注入
+            if retrieval_context:
+                messages.append({
+                    "role": "system",
+                    "content": retrieval_context,
+                })
+
+            messages.extend(history_dicts)
+            messages.append({"role": "user", "content": content})
+
+            # ── 8. 调用 Qwen ──
+            reply = AiChatService.get_client().chat(messages)
+            msg_assistant = ai_chat_dao.create_message(db, session_id, "assistant", reply)
             ai_chat_dao.touch_session(db, session_id)
+
+            # ── 9. 后处理（embedding + 摘要检查，失败不影响主流程） ──
+            _post_process_msg = msg_user.id if msg_user else None
+            if _post_process_msg and user_id:
+                try:
+                    AiChatService._store_message_embedding(
+                        db, msg_user.id, session_id, content
+                    )
+                except Exception as exc:
+                    logger.warning("Failed to store message embedding: %s", exc)
+
+            # 检查是否需要自动摘要
+            if existing_summary and compression_info["applied"]:
+                pass  # 压缩时已更新摘要
+            elif (
+                existing_summary
+                and len(history_dicts) + 2 >= AiChatService.summary_min_messages
+            ):
+                try:
+                    all_msgs = ai_chat_dao.list_all_session_messages(db, session_id)
+                    all_dicts = [
+                        {"role": m.role, "content": m.content} for m in all_msgs
+                    ]
+                    summarizer = AiChatService._get_summarizer()
+                    new_summary = summarizer.update_summary(existing_summary, all_dicts[-10:])
+                    if new_summary and new_summary != existing_summary:
+                        ai_chat_dao.update_session_summary(db, session_id, new_summary)
+                except Exception as exc:
+                    logger.warning("Auto-summary update failed: %s", exc)
 
             return success(
                 {
                     "session_id": session_id,
                     "reply": reply,
-                    "context_message_count": len(history),
+                    "context_message_count": len(history_dicts),
                     "memory_count": len(memories),
                     "saved_memory": saved_memory,
+                    "compression_applied": compression_info["applied"],
+                    "compression_count": compression_info["count"],
+                    "retrieval_count": len(json.loads(retrieval_context)) if retrieval_context else 0,
                 }
             )
+
         except (SQLAlchemyError, QwenConfigError, QwenRequestError, QwenResponseError) as exc:
             db.rollback()
+            logger.exception("Chat error")
             return fail(str(exc))
+
+    # ═══════════════════════════════════════════
+    #  内部助手
+    # ═══════════════════════════════════════════
+
+    @classmethod
+    def _run_retrieval(cls, db: Session, user_id: int, query: str) -> str:
+        """执行语义检索，返回格式化后的上下文文本。"""
+        try:
+            # 获取用户最近的会话
+            session_ids = ai_chat_dao.list_user_session_ids(db, user_id, limit=10)
+            if not session_ids:
+                return ""
+
+            # 加载候选向量
+            message_vectors_raw = ai_chat_dao.list_message_vectors_by_sessions(
+                db, session_ids, limit=200
+            )
+            message_vectors = [
+                {
+                    "message_id": mv.message_id,
+                    "session_id": mv.session_id,
+                    "content_text": mv.content_text,
+                    "embedding": mv.embedding,
+                }
+                for mv in message_vectors_raw
+            ]
+
+            memories_raw = ai_chat_dao.list_active_memories_with_embedding(
+                db, user_id, limit=100
+            )
+            memories_with_embedding = [
+                {
+                    "id": mem.id,
+                    "content": mem.content,
+                    "embedding": mem.embedding,
+                }
+                for mem in memories_raw
+            ]
+
+            if not message_vectors and not memories_with_embedding:
+                return ""
+
+            retriever = cls._get_retriever()
+            results = retriever.retrieve(query, message_vectors, memories_with_embedding)
+            return retriever.format_context(results) if results else ""
+        except Exception as exc:
+            logger.warning("Semantic retrieval failed (will skip): %s", exc)
+            return ""
+
+    @classmethod
+    def _store_message_embedding(
+        cls, db: Session, message_id: int, session_id: str, content: str
+    ):
+        """为消息生成 embedding 并存储。"""
+        if not content.strip():
+            return
+        client = cls.get_client()
+        embedding = client.embed_query(content)
+        ai_chat_dao.create_message_vector(
+            db,
+            message_id=message_id,
+            session_id=session_id,
+            content_text=content[:500],
+            embedding=embedding,
+        )
+
+    # ═══════════════════════════════════════════
+    #  记忆管理（保留原有逻辑）
+    # ═══════════════════════════════════════════
 
     @staticmethod
     def list_memories(db: Session, current_user, limit: int = 20):
@@ -85,6 +323,12 @@ class AiChatService:
         if not content:
             return fail("memory content is required")
         memory = ai_chat_dao.create_memory(db, current_user.id, content, source="manual")
+        # 异步生成 embedding
+        try:
+            embedding = AiChatService.get_client().embed_query(content)
+            ai_chat_dao.update_memory_embedding(db, memory.id, current_user.id, embedding)
+        except Exception as exc:
+            logger.warning("Failed to embed new memory: %s", exc)
         return success(AiChatService._memory_to_dict(memory), "memory created")
 
     @staticmethod
@@ -94,11 +338,109 @@ class AiChatService:
             return fail("memory not found")
         return success(None, "memory deleted")
 
+    # ═══════════════════════════════════════════
+    #  新增 API：会话摘要
+    # ═══════════════════════════════════════════
+
+    @staticmethod
+    def get_session_summary(db: Session, session_id: str):
+        session = ai_chat_dao.get_session(db, session_id)
+        if not session:
+            return fail("session not found")
+        return success({
+            "session_id": session.session_id,
+            "summary": session.summary,
+            "summary_updated_at": session.summary_updated_at.isoformat()
+                if session.summary_updated_at else None,
+            "message_count": len(session.messages) if session.messages else 0,
+        })
+
+    @staticmethod
+    def regenerate_summary(db: Session, session_id: str):
+        """一次性全量扫描会话消息，重新生成摘要。"""
+        session = ai_chat_dao.get_session(db, session_id)
+        if not session:
+            return fail("session not found")
+
+        messages = ai_chat_dao.list_all_session_messages(db, session_id)
+        if not messages:
+            return success({"session_id": session_id, "summary": ""}, "no messages to summarize")
+
+        msg_dicts = [{"role": m.role, "content": m.content} for m in messages]
+        try:
+            summarizer = AiChatService._get_summarizer()
+            summary = summarizer.generate_summary(msg_dicts)
+            if summary:
+                ai_chat_dao.update_session_summary(db, session_id, summary)
+            return success({
+                "session_id": session_id,
+                "summary": summary,
+                "message_count": len(messages),
+            })
+        except Exception as exc:
+            logger.exception("Failed to regenerate summary")
+            return fail(str(exc))
+
+    # ═══════════════════════════════════════════
+    #  新增 API：语义搜索
+    # ═══════════════════════════════════════════
+
+    @staticmethod
+    def search_memories(db: Session, query: str, user_id: int, limit: int = 5):
+        if not query.strip():
+            return fail("query is required")
+        try:
+            retriever = AiChatService._get_retriever()
+            query_vec = AiChatService.get_client().embed_query(query)
+
+            memories_raw = ai_chat_dao.list_active_memories_with_embedding(db, user_id, limit=100)
+            memories_with_embedding = [
+                {"id": m.id, "content": m.content, "embedding": m.embedding}
+                for m in memories_raw if m.embedding
+            ]
+
+            if not memories_with_embedding:
+                return success({"query": query, "total": 0, "items": []})
+
+            import numpy as np
+            mem_embeddings = [
+                (json.loads(m["embedding"]) if isinstance(m["embedding"], str)
+                 else m["embedding"])
+                for m in memories_with_embedding
+            ]
+            mem_vecs = np.array(mem_embeddings, dtype=np.float32)
+            qv = np.array(query_vec, dtype=np.float32)
+            sims = retriever._cosine_similarity(qv, mem_vecs)
+
+            items = []
+            for i in range(len(sims)):
+                if sims[i] >= 0.5:
+                    m = memories_with_embedding[i]
+                    items.append({
+                        "id": m["id"],
+                        "content": m["content"],
+                        "similarity": float(sims[i]),
+                    })
+            items.sort(key=lambda x: x["similarity"], reverse=True)
+            items = items[:limit]
+
+            return success({"query": query, "total": len(items), "items": items})
+        except Exception as exc:
+            logger.exception("Memory search failed")
+            return fail(str(exc))
+
+    # ═══════════════════════════════════════════
+    #  工具方法（原样保留）
+    # ═══════════════════════════════════════════
+
     @staticmethod
     def _build_memory_messages(memories) -> list[dict[str, str]]:
         if not memories:
             return []
-        memory_lines = [f"{index}. {memory.content}" for index, memory in enumerate(reversed(memories), start=1)]
+        memory_lines = [
+            f"{index}. {memory.content}"
+            for index, memory in enumerate(reversed(memories), start=1)
+        ]
         content = (
             "以下是当前用户的长期记忆。回答时可以结合这些信息，但不要主动暴露记忆列表：\n"
             + "\n".join(memory_lines)

@@ -27,6 +27,9 @@ class AiChatResponse(BaseModel):
     context_message_count: int
     memory_count: int = 0
     saved_memory: Optional[str] = None
+    compression_applied: bool = False
+    compression_count: int = 0
+    retrieval_count: int = 0
 
 
 class AiChatMemoryOut(BaseModel):
@@ -37,3 +40,22 @@ class AiChatMemoryOut(BaseModel):
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SessionSummaryOut(BaseModel):
+    session_id: str
+    summary: Optional[str] = None
+    summary_updated_at: Optional[str] = None
+    message_count: int = 0
+
+
+class MemorySearchItemOut(BaseModel):
+    id: int
+    content: str
+    similarity: float
+
+
+class MemorySearchOut(BaseModel):
+    query: str
+    total: int
+    items: list[MemorySearchItemOut]

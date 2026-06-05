@@ -19,6 +19,7 @@ QwenBaseError = (QwenConfigError, QwenRequestError, QwenResponseError)
 class QwenClient:
     text_generation_path = "/services/aigc/text-generation/generation"
     image_generation_path = "/services/aigc/multimodal-generation/generation"
+    embedding_path = "/services/embeddings/text-embedding/text-embedding"
 
     def __init__(self, config: QwenConfig | None = None):
         self.config = config or QwenConfig.from_env()
@@ -72,6 +73,64 @@ class QwenClient:
         data = self._post(self.image_generation_path, payload)
         images = self._parse_image_urls(data)
         return {"images": images, "raw": data.get("output")}
+
+    def embed_texts(
+        self,
+        texts: list[str],
+        model: str | None = None,
+    ) -> list[list[float]]:
+        """批量文本向量化，返回与输入顺序对应的向量列表。
+
+        DashScope text-embedding-v3 单次最多 6 条，超量会自动分批。
+        """
+        if not texts:
+            raise QwenConfigError("texts is required")
+
+        batch_size = 6
+        all_embeddings: list[list[float]] = []
+
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i : i + batch_size]
+            payload = {
+                "model": model or self.config.embedding_model,
+                "input": {"texts": batch},
+            }
+            data = self._post(self.embedding_path, payload)
+            all_embeddings.extend(self._parse_embedding_response(data))
+
+        return all_embeddings
+
+    def embed_query(self, text: str, model: str | None = None) -> list[float]:
+        """对单条查询文本向量化。"""
+        return self.embed_texts([text], model=model)[0]
+
+    def embed_documents(
+        self,
+        texts: list[str],
+        model: str | None = None,
+    ) -> list[list[float]]:
+        """对文档列表向量化（与 embed_texts 行为一致）。"""
+        return self.embed_texts(texts, model=model)
+
+    def _parse_embedding_response(self, data: dict[str, Any]) -> list[list[float]]:
+        """解析 embedding API 响应。"""
+        output = data.get("output")
+        if not isinstance(output, dict):
+            raise QwenResponseError("Embedding response missing output")
+
+        embeddings = output.get("embeddings")
+        if not isinstance(embeddings, list) or not embeddings:
+            raise QwenResponseError("Embedding response missing embeddings array")
+
+        result: list[list[float]] = []
+        for item in embeddings:
+            if not isinstance(item, dict):
+                raise QwenResponseError("Invalid embedding item in response")
+            vec = item.get("embedding")
+            if not isinstance(vec, list):
+                raise QwenResponseError("Invalid embedding vector in response")
+            result.append([float(v) for v in vec])
+        return result
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         api_key = self.config.require_api_key()

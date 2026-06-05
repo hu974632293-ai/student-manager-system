@@ -44,3 +44,31 @@ def delete_memory(
     current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
 ):
     return AiChatService.delete_memory(db, memory_id, current_user)
+
+
+@ai_chat_router.get("/sessions/{session_id}/summary", summary="获取 AI 会话摘要")
+def get_session_summary(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
+):
+    return AiChatService.get_session_summary(db, session_id)
+
+
+@ai_chat_router.post("/sessions/{session_id}/summarize", summary="重新生成会话摘要")
+def regenerate_summary(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
+):
+    return AiChatService.regenerate_summary(db, session_id)
+
+
+@ai_chat_router.get("/memories/search", summary="语义搜索长期记忆")
+def search_memories(
+    q: str = Query(..., min_length=1, max_length=500, description="搜索关键词或问题"),
+    limit: int = Query(5, ge=1, le=20),
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
+):
+    return AiChatService.search_memories(db, q, current_user.id, limit)
