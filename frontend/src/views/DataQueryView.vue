@@ -66,7 +66,7 @@ async function submit() {
   <section class="data-query-page">
     <aside class="workbench-side">
       <h3>智能问数</h3>
-      <p>输入自然语言问题，后端会转换为只读 SQL，并返回中文摘要和表格结果。</p>
+      <p>输入自然语言问题，系统会转换为只读查询语句，并返回中文摘要和表格结果。</p>
       <div class="query-examples">
         <button type="button" @click="question = '哪个班级平均成绩最高？'">哪个班级平均成绩最高？</button>
         <button type="button" @click="question = '薪资最高的前 5 名学生是谁？'">薪资最高的前 5 名学生是谁？</button>
@@ -97,7 +97,7 @@ async function submit() {
         </div>
 
         <div class="sql-block">
-          <span>执行 SQL</span>
+          <span>执行查询语句</span>
           <pre>{{ result.sql || "已隐藏" }}</pre>
         </div>
 
@@ -120,7 +120,7 @@ async function submit() {
       </section>
 
       <section v-else class="empty-state">
-        输入问题后点击查询，这里会展示 SQL、摘要和结果表格。
+        输入问题后点击查询，这里会展示查询语句、摘要和结果表格。
       </section>
     </main>
 

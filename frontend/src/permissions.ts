@@ -144,7 +144,7 @@ export const modules: MenuModule[] = [
   {
     key: "data-query",
     title: "智能问数",
-    subtitle: "自然语言转只读 SQL",
+    subtitle: "自然语言生成只读查询",
     route: "/data-query",
     icon: "Search",
     group: "tools",

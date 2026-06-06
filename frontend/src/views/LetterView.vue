@@ -115,7 +115,7 @@ async function send() {
           </el-radio-group>
         </el-form-item>
         <el-form-item label="收件邮箱">
-          <el-input v-model="form.to_email" placeholder="teacher@example.com" />
+          <el-input v-model="form.to_email" placeholder="请输入收件邮箱" />
         </el-form-item>
         <el-form-item label="邮件主题">
           <el-input v-model="form.subject" placeholder="请输入邮件主题" />

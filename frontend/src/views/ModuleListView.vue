@@ -163,7 +163,7 @@ const configs: Record<string, ModuleConfig> = {
       { key: "education", label: "学历" },
       { key: "enrollment_date", label: "入学日期", type: "date" },
       { key: "graduation_date", label: "毕业日期", type: "date" },
-      { key: "consultant_id", label: "顾问教师ID", type: "number" },
+      { key: "consultant_id", label: "顾问教师记录编号", type: "number" },
     ],
     filters: [
       { key: "student_id", label: "学号" },
@@ -195,21 +195,21 @@ const configs: Record<string, ModuleConfig> = {
     description: "班级信息支持分页查询、新增、编辑、删除；教师只能查看授课班级。",
     writePermission: "classes:write",
     columns: [
-      { key: "id", label: "ID" },
+      { key: "id", label: "记录编号" },
       { key: "class_id", label: "班级编号" },
       { key: "head_teacher", label: "班主任" },
       { key: "start_date", label: "开班日期" },
       { key: "description", label: "描述" },
     ],
     fields: [
-      { key: "id", label: "ID", type: "number", updateOnly: true, readonlyOnEdit: true },
+      { key: "id", label: "记录编号", type: "number", updateOnly: true, readonlyOnEdit: true },
       { key: "class_id", label: "班级编号", required: true },
       { key: "head_teacher", label: "班主任" },
       { key: "start_date", label: "开班日期", type: "date" },
       { key: "description", label: "描述", type: "textarea" },
     ],
     filters: [
-      { key: "id", label: "班级记录ID", type: "number" },
+      { key: "id", label: "班级记录编号", type: "number" },
       { key: "keyword", label: "关键字" },
     ],
     async list(currentPage, size, filters = {}) {
@@ -234,7 +234,7 @@ const configs: Record<string, ModuleConfig> = {
     description: "教师档案当前由后端返回全量列表，前端按页展示。",
     writePermission: "teachers:write",
     columns: [
-      { key: "id", label: "ID" },
+      { key: "id", label: "记录编号" },
       { key: "teacher_number", label: "工号" },
       { key: "name", label: "姓名" },
       { key: "gender", label: "性别" },
@@ -243,7 +243,7 @@ const configs: Record<string, ModuleConfig> = {
       { key: "email", label: "邮箱" },
     ],
     fields: [
-      { key: "id", label: "ID", type: "number", updateOnly: true, readonlyOnEdit: true },
+      { key: "id", label: "记录编号", type: "number", updateOnly: true, readonlyOnEdit: true },
       { key: "teacher_number", label: "工号", required: true },
       { key: "name", label: "姓名", required: true },
       { key: "gender", label: "性别" },
@@ -253,7 +253,7 @@ const configs: Record<string, ModuleConfig> = {
       { key: "is_active", label: "启用", type: "switch", updateOnly: true },
     ],
     filters: [
-      { key: "id", label: "教师ID", type: "number" },
+      { key: "id", label: "教师记录编号", type: "number" },
       { key: "keyword", label: "关键字" },
     ],
     async list(currentPage, size, filters = {}) {
@@ -329,7 +329,7 @@ const configs: Record<string, ModuleConfig> = {
     description: "就业记录支持分页查询、新增、编辑、删除；顾问和教师按后端范围过滤。",
     writePermission: "employment:write",
     columns: [
-      { key: "id", label: "ID" },
+      { key: "id", label: "记录编号" },
       { key: "student_id", label: "学号" },
       { key: "name", label: "姓名" },
       { key: "class_name", label: "班级" },
@@ -342,7 +342,7 @@ const configs: Record<string, ModuleConfig> = {
       { key: "name", label: "姓名", required: true },
       { key: "class_name", label: "班级", required: true },
       { key: "job_open_date", label: "开岗日期", type: "date" },
-      { key: "offer_date", label: "Offer 日期", type: "date" },
+      { key: "offer_date", label: "录用日期", type: "date" },
       { key: "company_name", label: "公司" },
       { key: "position", label: "岗位" },
       { key: "salary", label: "薪资", type: "number", required: true },

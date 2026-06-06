@@ -182,7 +182,7 @@ onUnmounted(() => {
       <article class="page-surface">
         <div class="card-title">
           <h4>学生就业时长</h4>
-          <span>基于 offer 日期与开岗日期计算</span>
+          <span>基于录用日期与开岗日期计算</span>
         </div>
         <el-table :data="studentDurationRows" border height="300">
           <el-table-column prop="student_id" label="学号" width="130" />

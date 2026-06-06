@@ -61,7 +61,7 @@ async function send() {
       body: JSON.stringify({ session_id: sessionId.value || undefined, message }),
     });
     sessionId.value = data.session_id;
-    messages.value.push({ role: "assistant", content: data.reply || "AI 未返回有效内容" });
+    messages.value.push({ role: "assistant", content: data.reply || "助手未返回有效内容" });
     if (data.saved_memory) await loadMemories();
   } catch (error) {
     const message = error instanceof Error ? error.message : "请求失败";
@@ -126,7 +126,7 @@ async function searchMemories() {
 
 async function loadSummary(regenerate = false) {
   if (!sessionId.value) {
-    ElMessage.warning("请先创建或填写会话 ID");
+    ElMessage.warning("请先创建或填写会话编号");
     return;
   }
   summaryLoading.value = true;
@@ -149,8 +149,8 @@ onMounted(loadMemories);
   <section class="ai-workbench expanded">
     <aside class="workbench-side">
       <h3>会话</h3>
-      <p>填写会话 ID 可继续已有对话；留空会自动创建。</p>
-      <el-input v-model="sessionId" clearable placeholder="会话 ID" />
+      <p>填写会话编号可继续已有对话；留空会自动创建。</p>
+      <el-input v-model="sessionId" clearable placeholder="会话编号" />
       <div class="side-actions">
         <el-button :loading="summaryLoading" @click="loadSummary(false)">查看摘要</el-button>
         <el-button :loading="summaryLoading" @click="loadSummary(true)">重新摘要</el-button>
@@ -174,7 +174,7 @@ onMounted(loadMemories);
         </article>
       </div>
       <div class="composer">
-        <el-input v-model="prompt" type="textarea" :rows="3" resize="none" placeholder="输入问题，Ctrl + Enter 发送" @keyup.ctrl.enter="send" />
+        <el-input v-model="prompt" type="textarea" :rows="3" resize="none" placeholder="输入问题后点击发送，也可按 Ctrl + Enter" @keyup.ctrl.enter="send" />
         <el-button type="primary" :loading="loading" @click="send">发送</el-button>
       </div>
     </main>
