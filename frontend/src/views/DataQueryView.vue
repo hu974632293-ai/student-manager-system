@@ -11,6 +11,38 @@ const loading = ref(false);
 const result = ref<DataQueryResult | null>(null);
 
 const hasRows = computed(() => Boolean(result.value?.rows.length));
+const columnLabels: Record<string, string> = {
+  student_id: "学号",
+  student_name: "学生姓名",
+  name: "姓名",
+  gender: "性别",
+  age: "年龄",
+  major: "专业",
+  class_id: "班级编号",
+  class_name: "班级",
+  teacher_id: "教师编号",
+  teacher_name: "教师姓名",
+  exam_round: "考试轮次",
+  score: "分数",
+  average_score: "平均分",
+  avg_score: "平均分",
+  min_score: "最低分",
+  max_score: "最高分",
+  score_count: "成绩记录数",
+  student_count: "学生人数",
+  count: "数量",
+  total: "总数",
+  company_name: "公司",
+  job_title: "岗位",
+  salary: "薪资",
+  employment_date: "就业日期",
+  duration_days: "就业时长（天）",
+  average_duration_days: "平均就业时长（天）",
+};
+
+function columnLabel(column: string) {
+  return columnLabels[column] || column.replace(/_/g, " ");
+}
 
 async function submit() {
   const text = question.value.trim();
@@ -78,7 +110,7 @@ async function submit() {
               v-for="column in result.columns"
               :key="column"
               :prop="column"
-              :label="column"
+              :label="columnLabel(column)"
               min-width="140"
               show-overflow-tooltip
             />
