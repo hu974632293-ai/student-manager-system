@@ -208,8 +208,21 @@ const configs: Record<string, ModuleConfig> = {
       { key: "start_date", label: "开班日期", type: "date" },
       { key: "description", label: "描述", type: "textarea" },
     ],
-    async list(currentPage, size) {
-      const data = await request<{ items?: Row[]; total?: number }>(`/classes/?page=${currentPage}&size=${size}`);
+    filters: [
+      { key: "id", label: "班级ID", type: "number" },
+      { key: "keyword", label: "关键字" },
+    ],
+    async list(currentPage, size, filters = {}) {
+      if (filters.id !== undefined) {
+        const data = await request<Row>(`/classes/${filters.id}`);
+        return paginateLocalRows(data ? [data] : [], currentPage, size);
+      }
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        size: String(size),
+      });
+      if (filters.keyword) params.set("keyword", String(filters.keyword));
+      const data = await request<{ items?: Row[]; total?: number }>(`/classes/?${params.toString()}`);
       return { rows: data.items || [], total: Number(data.total || 0) };
     },
     create: (payload) => jsonRequest("/classes/", "POST", { ...payload, teacher_ids: [] }),
@@ -239,10 +252,21 @@ const configs: Record<string, ModuleConfig> = {
       { key: "email", label: "邮箱" },
       { key: "is_active", label: "启用", type: "switch", updateOnly: true },
     ],
-    async list(currentPage, size) {
+    filters: [
+      { key: "id", label: "教师ID", type: "number" },
+      { key: "keyword", label: "关键字" },
+    ],
+    async list(currentPage, size, filters = {}) {
+      if (filters.id !== undefined) {
+        const data = await request<Row>(`/teacher/get/${filters.id}`);
+        return paginateLocalRows(data ? [data] : [], currentPage, size);
+      }
       const data = await request<Row[]>("/teacher/list");
-      const start = (currentPage - 1) * size;
-      return { rows: (data || []).slice(start, start + size), total: (data || []).length };
+      const keyword = String(filters.keyword || "").trim().toLowerCase();
+      const items = keyword
+        ? (data || []).filter((item) => JSON.stringify(item).toLowerCase().includes(keyword))
+        : (data || []);
+      return paginateLocalRows(items, currentPage, size);
     },
     create: (payload) => jsonRequest("/teacher/add", "POST", payload),
     update: (_row, payload) => jsonRequest("/teacher/update", "PUT", payload),
