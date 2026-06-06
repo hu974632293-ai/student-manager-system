@@ -145,7 +145,7 @@ const configs: Record<string, ModuleConfig> = {
     columns: [
       { key: "student_id", label: "学号" },
       { key: "name", label: "姓名" },
-      { key: "class_id", label: "班级ID" },
+      { key: "class_id", label: "班级编号" },
       { key: "major", label: "专业" },
       { key: "education", label: "学历" },
       { key: "gender", label: "性别" },
@@ -153,7 +153,7 @@ const configs: Record<string, ModuleConfig> = {
     ],
     fields: [
       { key: "student_id", label: "学号", required: true, readonlyOnEdit: true },
-      { key: "class_id", label: "班级ID", type: "number", required: true },
+      { key: "class_id", label: "班级编号", type: "number", required: true },
       { key: "name", label: "姓名", required: true },
       { key: "gender", label: "性别" },
       { key: "age", label: "年龄", type: "number" },
@@ -168,7 +168,7 @@ const configs: Record<string, ModuleConfig> = {
     filters: [
       { key: "student_id", label: "学号" },
       { key: "student_name", label: "姓名" },
-      { key: "class_id", label: "班级ID", type: "number" },
+      { key: "class_id", label: "班级编号", type: "number" },
     ],
     async list(currentPage, size, filters = {}) {
       if (hasFilters(filters)) {
@@ -209,7 +209,7 @@ const configs: Record<string, ModuleConfig> = {
       { key: "description", label: "描述", type: "textarea" },
     ],
     filters: [
-      { key: "id", label: "班级ID", type: "number" },
+      { key: "id", label: "班级记录ID", type: "number" },
       { key: "keyword", label: "关键字" },
     ],
     async list(currentPage, size, filters = {}) {

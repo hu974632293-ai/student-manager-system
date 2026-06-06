@@ -23,7 +23,7 @@ const profileRows = computed(() => {
   return [
     { label: "学号", value: student.value.student_id },
     { label: "姓名", value: student.value.name },
-    { label: "班级ID", value: student.value.class_id },
+    { label: "班级编号", value: student.value.class_id },
     { label: "性别", value: student.value.gender },
     { label: "年龄", value: student.value.age },
     { label: "籍贯", value: student.value.native_place },

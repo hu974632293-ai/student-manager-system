@@ -137,7 +137,7 @@ onUnmounted(() => {
     <div class="section-heading">
       <div>
         <h3>运营总览</h3>
-        <p>基于当前角色可访问数据生成，不使用前端假数据。</p>
+        <p>基于当前账号可访问数据生成，统计结果来自后端实时接口。</p>
       </div>
       <el-button :loading="loading" @click="load">刷新</el-button>
     </div>
@@ -206,7 +206,7 @@ onUnmounted(() => {
         <el-table :data="summary?.recent_students || []" border height="300">
           <el-table-column prop="student_id" label="学号" width="130" />
           <el-table-column prop="name" label="姓名" width="120" />
-          <el-table-column prop="class_id" label="班级ID" width="110" />
+          <el-table-column prop="class_id" label="班级编号" width="110" />
           <el-table-column prop="major" label="专业" min-width="160" show-overflow-tooltip />
         </el-table>
       </article>

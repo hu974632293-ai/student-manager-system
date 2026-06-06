@@ -38,9 +38,9 @@ async function submit() {
     <section class="login-visual">
       <img :src="heroImage" alt="学生管理系统数据看板" />
       <div class="visual-copy">
-        <p>Role Based Console</p>
+        <p>角色权限工作台</p>
         <h1>学生管理系统</h1>
-        <span>按角色进入不同工作台，接口权限与数据范围由后端兜底。</span>
+        <span>按角色进入对应工作台，数据访问范围由系统自动控制。</span>
       </div>
     </section>
     <section class="login-panel">
@@ -66,6 +66,7 @@ async function submit() {
         <span>admin / admin123</span>
         <span>teacher / teacher123</span>
         <span>student / student123</span>
+        <span>consultant / consultant123</span>
       </div>
     </section>
   </main>
