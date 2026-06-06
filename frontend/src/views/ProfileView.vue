@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 
 import { notifyError, request } from "@/api/http";
-import { roleLabels } from "@/permissions";
+import { permissionLabel, roleLabels } from "@/permissions";
 import { useAuthStore } from "@/stores/auth";
 
 type Row = Record<string, unknown>;
@@ -34,6 +34,13 @@ const profileRows = computed(() => {
     { label: "毕业日期", value: student.value.graduation_date },
   ];
 });
+
+const permissionRows = computed(() =>
+  auth.permissions.map((item) => ({
+    key: item,
+    label: permissionLabel(item),
+  })),
+);
 
 async function loadProfile() {
   if (!auth.user?.student_id) return;
@@ -88,10 +95,12 @@ onMounted(loadProfile);
     <article class="page-surface">
       <div class="card-title">
         <h4>当前权限</h4>
-        <span>{{ auth.permissions.length }} 个权限点</span>
+        <span>{{ permissionRows.length }} 个权限点</span>
       </div>
       <div class="tag-list">
-        <el-tag v-for="item in auth.permissions" :key="item" effect="plain">{{ item }}</el-tag>
+        <el-tooltip v-for="item in permissionRows" :key="item.key" :content="item.key" placement="top">
+          <el-tag effect="plain">{{ item.label }}</el-tag>
+        </el-tooltip>
       </div>
     </article>
   </section>

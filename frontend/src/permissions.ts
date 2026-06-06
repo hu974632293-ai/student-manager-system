@@ -12,6 +12,28 @@ export const groupLabels: Record<NonNullable<MenuModule["group"]>, string> = {
   tools: "系统工具",
 };
 
+export const permissionLabels: Record<string, string> = {
+  "profile:read": "查看个人信息",
+  "students:read": "查看学生档案",
+  "students:write": "维护学生档案",
+  "classes:read": "查看班级信息",
+  "classes:write": "维护班级信息",
+  "teachers:read": "查看教师档案",
+  "teachers:write": "维护教师档案",
+  "scores:read": "查看成绩",
+  "scores:write": "维护成绩",
+  "employment:read": "查看就业信息",
+  "employment:write": "维护就业信息",
+  "statistics:read": "查看统计分析",
+  "logs:read": "查看系统日志",
+  "letters:send": "生成与发送邮件",
+  "weather:use": "使用天气查询",
+  "geocode:use": "使用经纬度查询",
+  "ai-chat:use": "使用普通问答",
+  "data-query:use": "使用智能问数",
+  "permissions:manage": "查看权限矩阵",
+};
+
 export const modules: MenuModule[] = [
   {
     key: "overview",
@@ -160,4 +182,8 @@ export function roleModules(role?: Role, serverModules: string[] = []) {
 
 export function findModule(key?: string) {
   return modules.find((item) => item.key === key);
+}
+
+export function permissionLabel(key: string) {
+  return permissionLabels[key] || key;
 }
