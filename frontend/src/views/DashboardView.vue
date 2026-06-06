@@ -43,15 +43,19 @@ const shortcuts = computed(() =>
   ),
 );
 
+function canOpen(moduleKey: string) {
+  return auth.modules.includes(moduleKey);
+}
+
 const metrics = computed(() => {
   const data = summary.value;
   return [
-    { label: "学生总数", value: data?.totals.students ?? 0, route: "/students" },
-    { label: "教师总数", value: data?.totals.teachers ?? 0, route: "/teachers" },
-    { label: "班级总数", value: data?.totals.classes ?? 0, route: "/classes" },
-    { label: "成绩记录", value: data?.totals.scores ?? 0, route: "/scores" },
-    { label: "就业记录", value: data?.totals.employment ?? 0, route: "/employment" },
-    { label: "平均成绩", value: data?.score_overview.average_score ?? 0, route: "/statistics" },
+    { key: "students", label: "学生总数", value: data?.totals.students ?? 0, route: "/students" },
+    { key: "teachers", label: "教师总数", value: data?.totals.teachers ?? 0, route: "/teachers" },
+    { key: "classes", label: "班级总数", value: data?.totals.classes ?? 0, route: "/classes" },
+    { key: "scores", label: "成绩记录", value: data?.totals.scores ?? 0, route: "/scores" },
+    { key: "employment", label: "就业记录", value: data?.totals.employment ?? 0, route: "/employment" },
+    { key: "statistics", label: "平均成绩", value: data?.score_overview.average_score ?? 0, route: "/statistics" },
   ];
 });
 
@@ -139,7 +143,7 @@ onUnmounted(() => {
     </div>
 
     <div class="metric-grid dense">
-      <RouterLink v-for="item in metrics" :key="item.label" class="metric-card" :to="item.route">
+      <RouterLink v-for="item in metrics.filter((metric) => canOpen(metric.key))" :key="item.label" class="metric-card" :to="item.route">
         <span>{{ item.label }}</span>
         <strong>{{ item.value }}</strong>
       </RouterLink>
@@ -149,28 +153,28 @@ onUnmounted(() => {
       <article class="chart-card">
         <div class="card-title">
           <h4>班级人数分布</h4>
-          <RouterLink to="/classes">进入班级管理</RouterLink>
+          <RouterLink v-if="canOpen('classes')" to="/classes">进入班级管理</RouterLink>
         </div>
         <div ref="classChart" class="chart-box" />
       </article>
       <article class="chart-card">
         <div class="card-title">
           <h4>成绩趋势</h4>
-          <RouterLink to="/scores">进入成绩管理</RouterLink>
+          <RouterLink v-if="canOpen('scores')" to="/scores">进入成绩管理</RouterLink>
         </div>
         <div ref="scoreChart" class="chart-box" />
       </article>
       <article class="chart-card">
         <div class="card-title">
           <h4>就业去向统计</h4>
-          <RouterLink to="/employment">进入就业管理</RouterLink>
+          <RouterLink v-if="canOpen('employment')" to="/employment">进入就业管理</RouterLink>
         </div>
         <div ref="employmentChart" class="chart-box" />
       </article>
       <article class="chart-card risk-panel">
         <div class="card-title">
           <h4>风险与机会</h4>
-          <RouterLink to="/statistics">查看统计分析</RouterLink>
+          <RouterLink v-if="canOpen('statistics')" to="/statistics">查看统计分析</RouterLink>
         </div>
         <div class="risk-grid">
           <div>
@@ -197,7 +201,7 @@ onUnmounted(() => {
       <article class="page-surface">
         <div class="card-title">
           <h4>近期学生</h4>
-          <RouterLink to="/students">查看学生</RouterLink>
+          <RouterLink v-if="canOpen('students')" to="/students">查看学生</RouterLink>
         </div>
         <el-table :data="summary?.recent_students || []" border height="300">
           <el-table-column prop="student_id" label="学号" width="130" />
