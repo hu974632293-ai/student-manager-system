@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.controllers.ai_chat import ai_chat_router
@@ -45,6 +46,13 @@ VALIDATION_MESSAGE_MAP = {
     "greater_than_equal": "必须大于或等于指定值",
     "less_than": "必须小于指定值",
     "less_than_equal": "必须小于或等于指定值",
+    "value_error": "校验未通过",
+}
+
+CUSTOM_VALIDATION_MESSAGE_MAP = {
+    "student_id cannot be empty": "学号不能为空",
+    "max_score must be greater than or equal to min_score": "最高分必须大于或等于最低分",
+    "city or latitude/longitude is required": "请填写城市，或同时填写纬度和经度",
 }
 
 FIELD_LABEL_MAP = {
@@ -77,11 +85,13 @@ def _format_validation_errors(errors: list[dict]) -> list[dict]:
         loc = error.get("loc") or []
         field = ".".join(str(item) for item in loc if item not in {"body", "query", "path"})
         label = FIELD_LABEL_MAP.get(field, field or "请求参数")
-        message = VALIDATION_MESSAGE_MAP.get(str(error.get("type")), "参数格式不正确")
+        ctx_error = str((error.get("ctx") or {}).get("error") or "")
+        custom_message = CUSTOM_VALIDATION_MESSAGE_MAP.get(ctx_error)
+        message = custom_message or f"{label}{VALIDATION_MESSAGE_MAP.get(str(error.get('type')), '参数格式不正确')}"
         formatted.append(
             {
                 "field": field or "请求参数",
-                "msg": f"{label}{message}",
+                "msg": message,
             }
         )
     return formatted
@@ -112,6 +122,12 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning("请求参数校验失败 path=%s errors=%s", request.url.path, exc.errors())
+    return JSONResponse(status_code=422, content=fail("request validation failed", _format_validation_errors(exc.errors())))
+
+
+@app.exception_handler(ValidationError)
+async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):
     logger.warning("请求参数校验失败 path=%s errors=%s", request.url.path, exc.errors())
     return JSONResponse(status_code=422, content=fail("request validation failed", _format_validation_errors(exc.errors())))
 
