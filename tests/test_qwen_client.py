@@ -32,6 +32,7 @@ def make_client(api_key="test-key"):
             api_key=api_key,
             text_model="qwen-plus",
             image_model="qwen-image-2.0-pro",
+            embedding_model="text-embedding-v3",
             base_url="https://dashscope.aliyuncs.com/api/v1",
             timeout_seconds=30,
         )
@@ -121,6 +122,9 @@ def test_ai_chat_service_returns_unified_failure(monkeypatch):
     from app.services.ai_chat_service import AiChatService
     from app.views.schemas.ai_chat import AiChatRequest
 
+    class FakeMessage:
+        id = None
+
     class FakeDao:
         def get_session(self, db, session_id):
             return None
@@ -128,11 +132,14 @@ def test_ai_chat_service_returns_unified_failure(monkeypatch):
         def create_session(self, db, session_id, title):
             return object()
 
+        def get_session_summary(self, db, session_id):
+            return None
+
         def list_recent_messages(self, db, session_id, limit):
             return []
 
         def create_message(self, db, session_id, role, content):
-            return object()
+            return FakeMessage()
 
         def list_memories(self, db, user_id, limit):
             return []
@@ -155,7 +162,7 @@ def test_ai_chat_service_returns_unified_failure(monkeypatch):
 
     assert result == {
         "code": 0,
-        "msg": "QWEN_API_KEY or DASHSCOPE_API_KEY is required",
+        "msg": "未配置通义千问 API Key，请先配置 QWEN_API_KEY 或 DASHSCOPE_API_KEY",
         "data": None,
     }
     assert fake_db.rolled_back is True
@@ -165,13 +172,22 @@ def test_ai_chat_service_injects_user_memory(monkeypatch):
     from app.services.ai_chat_service import AiChatService
     from app.views.schemas.ai_chat import AiChatRequest
 
+    class FakeSession:
+        user_id = 7
+
+    class FakeMessage:
+        id = None
+
     class FakeMemory:
         id = 1
         content = "用户喜欢简洁回答"
 
     class FakeDao:
         def get_session(self, db, session_id):
-            return object()
+            return FakeSession()
+
+        def get_session_summary(self, db, session_id):
+            return None
 
         def list_recent_messages(self, db, session_id, limit):
             return []
@@ -180,10 +196,13 @@ def test_ai_chat_service_injects_user_memory(monkeypatch):
             return [FakeMemory()]
 
         def create_message(self, db, session_id, role, content):
-            return object()
+            return FakeMessage()
 
         def touch_session(self, db, session_id):
             return object()
+
+        def list_user_session_ids(self, db, user_id, limit=10):
+            return []
 
     class FakeClient:
         captured_messages = None
@@ -213,6 +232,12 @@ def test_ai_chat_service_saves_explicit_memory(monkeypatch):
     from app.services.ai_chat_service import AiChatService
     from app.views.schemas.ai_chat import AiChatRequest
 
+    class FakeSession:
+        user_id = 7
+
+    class FakeMessage:
+        id = None
+
     class FakeMemory:
         id = 2
         content = "我的专业是软件工程"
@@ -221,7 +246,10 @@ def test_ai_chat_service_saves_explicit_memory(monkeypatch):
         saved_content = None
 
         def get_session(self, db, session_id):
-            return object()
+            return FakeSession()
+
+        def get_session_summary(self, db, session_id):
+            return None
 
         def list_recent_messages(self, db, session_id, limit):
             return []
@@ -234,10 +262,13 @@ def test_ai_chat_service_saves_explicit_memory(monkeypatch):
             return FakeMemory()
 
         def create_message(self, db, session_id, role, content):
-            return object()
+            return FakeMessage()
 
         def touch_session(self, db, session_id):
             return object()
+
+        def list_user_session_ids(self, db, user_id, limit=10):
+            return []
 
     class FakeClient:
         def chat(self, messages):

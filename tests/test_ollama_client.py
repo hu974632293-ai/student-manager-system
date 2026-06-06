@@ -89,7 +89,7 @@ def test_letter_service_returns_unified_success(monkeypatch):
 
     assert result == {
         "code": 1,
-        "msg": "success",
+        "msg": "操作成功",
         "data": {
             "recipient": "luke",
             "recipient_name": "Luke哥",

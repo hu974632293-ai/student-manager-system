@@ -9,7 +9,8 @@ const files = [
   "frontend/src/views/LetterView.vue",
   "frontend/src/views/WeatherView.vue",
   "frontend/src/views/GeocodeView.vue",
-  "frontend/src/views/WorkbenchView.vue",
+  "frontend/src/views/AiChatView.vue",
+  "frontend/src/views/DataQueryView.vue",
 ].map((file) => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
 
 function assertIncludes(text, message) {
@@ -22,4 +23,5 @@ assertIncludes("运营总览", "总览页未改造成 BI 看板文案");
 assertIncludes("邮件发送", "缺少邮件发送页面文案");
 assertIncludes("天气查询", "缺少天气查询页面文案");
 assertIncludes("经纬度查询", "缺少经纬度查询页面文案");
-assertIncludes("暂未开放", "知识库/智能体缺少暂未开放占位文案");
+assertIncludes("普通问答", "缺少普通问答页面文案");
+assertIncludes("智能问数", "缺少智能问数页面文案");

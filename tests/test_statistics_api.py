@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.controllers import auth as auth_api
 from app.controllers import statistics as statistics_api
 from app.core.database import Base
 from app.dao.statistics import statistics_dao
@@ -15,14 +16,20 @@ def make_client():
     app = FastAPI()
     app.include_router(statistics_api.statistics_router)
     app.dependency_overrides[statistics_api.get_db] = lambda: object()
+    app.dependency_overrides[auth_api.get_current_user] = lambda: type(
+        "FakeUser",
+        (),
+        {"id": 1, "role": "admin", "teacher_id": None, "student_id": None},
+    )()
     return TestClient(app)
 
 
 def test_students_over_30_accepts_min_age_query(monkeypatch):
     captured = {}
 
-    def fake_get_students_over_30(db, min_age):
+    def fake_get_students_over_30(db, min_age, allowed_student_ids=None):
         captured["min_age"] = min_age
+        captured["allowed_student_ids"] = allowed_student_ids
         return []
 
     monkeypatch.setattr(
@@ -34,15 +41,16 @@ def test_students_over_30_accepts_min_age_query(monkeypatch):
     response = make_client().get("/statistics/students/over-30?min_age=25")
 
     assert response.status_code == 200
-    assert response.json() == {"code": 1, "msg": "statistics found", "data": []}
-    assert captured == {"min_age": 25}
+    assert response.json() == {"code": 1, "msg": "统计数据获取成功", "data": []}
+    assert captured == {"min_age": 25, "allowed_student_ids": None}
 
 
 def test_top_salary_students_keeps_default_limit(monkeypatch):
     captured = {}
 
-    def fake_get_top5_salary_students(db, limit):
+    def fake_get_top5_salary_students(db, limit, allowed_student_ids=None):
         captured["limit"] = limit
+        captured["allowed_student_ids"] = allowed_student_ids
         return []
 
     monkeypatch.setattr(
@@ -54,16 +62,17 @@ def test_top_salary_students_keeps_default_limit(monkeypatch):
     response = make_client().get("/statistics/employment/top5-salary")
 
     assert response.status_code == 200
-    assert response.json() == {"code": 1, "msg": "statistics found", "data": []}
-    assert captured == {"limit": 5}
+    assert response.json() == {"code": 1, "msg": "统计数据获取成功", "data": []}
+    assert captured == {"limit": 5, "allowed_student_ids": None}
 
 
 def test_failed_more_than_twice_accepts_score_and_count_queries(monkeypatch):
     captured = {}
 
-    def fake_get_students_failed_more_than_twice(db, fail_score, min_fail_count):
+    def fake_get_students_failed_more_than_twice(db, fail_score, min_fail_count, allowed_student_ids=None):
         captured["fail_score"] = fail_score
         captured["min_fail_count"] = min_fail_count
+        captured["allowed_student_ids"] = allowed_student_ids
         return []
 
     monkeypatch.setattr(
@@ -77,8 +86,8 @@ def test_failed_more_than_twice_accepts_score_and_count_queries(monkeypatch):
     )
 
     assert response.status_code == 200
-    assert response.json() == {"code": 1, "msg": "statistics found", "data": []}
-    assert captured == {"fail_score": 50.0, "min_fail_count": 1}
+    assert response.json() == {"code": 1, "msg": "统计数据获取成功", "data": []}
+    assert captured == {"fail_score": 50.0, "min_fail_count": 1, "allowed_student_ids": None}
 
 
 def test_invalid_limit_is_rejected():
