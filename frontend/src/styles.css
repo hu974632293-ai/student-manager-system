@@ -427,6 +427,22 @@ a {
   margin-top: 12px;
 }
 
+.summary-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.summary-card p {
+  margin: 0;
+  padding: 12px;
+  color: #334155;
+  line-height: 1.7;
+  border: 1px solid #dfe6ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
 .memory-side {
   display: grid;
   align-content: start;

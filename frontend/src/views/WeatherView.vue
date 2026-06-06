@@ -18,6 +18,13 @@ const lives = computed(() => {
   return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
 });
 
+const hasQueried = computed(() => Boolean(result.value));
+
+function displayValue(value: unknown, suffix = "") {
+  if (value === null || value === undefined || value === "") return "-";
+  return `${value}${suffix}`;
+}
+
 async function query() {
   const params = new URLSearchParams();
   if (form.mode === "city") {
@@ -85,17 +92,17 @@ async function query() {
       </div>
       <div v-if="lives.length" class="weather-grid">
         <article v-for="item in lives" :key="String(item.adcode || item.city)" class="weather-card">
-          <strong>{{ item.province }} {{ item.city }}</strong>
-          <span>{{ item.weather }}</span>
+          <strong>{{ displayValue(item.province) }} {{ displayValue(item.city) }}</strong>
+          <span>{{ displayValue(item.weather) }}</span>
           <div>
-            <b>{{ item.temperature }}°C</b>
-            <small>湿度 {{ item.humidity }}%</small>
+            <b>{{ displayValue(item.temperature, "°C") }}</b>
+            <small>湿度 {{ displayValue(item.humidity, "%") }}</small>
           </div>
-          <p>风向 {{ item.winddirection }}，风力 {{ item.windpower }}，更新时间 {{ item.reporttime }}</p>
+          <p>风向 {{ displayValue(item.winddirection) }}，风力 {{ displayValue(item.windpower) }}，更新时间 {{ displayValue(item.reporttime) }}</p>
         </article>
       </div>
-      <pre v-if="result" class="result-pre">{{ JSON.stringify(result, null, 2) }}</pre>
-      <div v-else class="empty-state compact">接口失败、API key 缺失或城市不存在时会在这里保持空状态并弹出错误提示。</div>
+      <div v-else-if="hasQueried" class="empty-state compact">本次查询未返回实时天气数据，请调整城市或坐标后重试。</div>
+      <div v-else class="empty-state compact">请输入城市或经纬度后查询，系统会在这里展示实时天气。</div>
     </aside>
   </section>
 </template>

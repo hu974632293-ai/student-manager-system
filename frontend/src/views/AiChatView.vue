@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 import { notifyError, request } from "@/api/http";
 
@@ -21,6 +21,13 @@ interface MemoryItem {
   is_active: boolean;
 }
 
+interface SessionSummary {
+  session_id: string;
+  summary: string;
+  summary_updated_at?: string | null;
+  message_count?: number;
+}
+
 const prompt = ref("");
 const sessionId = ref("");
 const loading = ref(false);
@@ -28,10 +35,19 @@ const memoryLoading = ref(false);
 const summaryLoading = ref(false);
 const newMemory = ref("");
 const searchQuery = ref("");
-const summary = ref<Record<string, unknown> | null>(null);
+const summary = ref<SessionSummary | null>(null);
 const memories = ref<MemoryItem[]>([]);
 const searchItems = ref<Record<string, unknown>[]>([]);
 const messages = ref<{ role: "user" | "assistant"; content: string }[]>([]);
+
+const summaryText = computed(() => summary.value?.summary || "当前会话暂无摘要内容");
+
+function formatTime(value?: string | null) {
+  if (!value) return "暂未生成";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("zh-CN", { hour12: false });
+}
 
 async function send() {
   const message = prompt.value.trim();
@@ -115,7 +131,7 @@ async function loadSummary(regenerate = false) {
   }
   summaryLoading.value = true;
   try {
-    summary.value = await request<Record<string, unknown>>(
+    summary.value = await request<SessionSummary>(
       `/ai/sessions/${sessionId.value}/${regenerate ? "summarize" : "summary"}`,
       { method: regenerate ? "POST" : "GET" },
     );
@@ -139,14 +155,21 @@ onMounted(loadMemories);
         <el-button :loading="summaryLoading" @click="loadSummary(false)">查看摘要</el-button>
         <el-button :loading="summaryLoading" @click="loadSummary(true)">重新摘要</el-button>
       </div>
-      <pre v-if="summary" class="result-pre compact-pre">{{ JSON.stringify(summary, null, 2) }}</pre>
+      <div v-if="summary" class="summary-card">
+        <el-descriptions :column="1" size="small" border>
+          <el-descriptions-item label="会话编号">{{ summary.session_id }}</el-descriptions-item>
+          <el-descriptions-item label="消息数量">{{ summary.message_count ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="更新时间">{{ formatTime(summary.summary_updated_at) }}</el-descriptions-item>
+        </el-descriptions>
+        <p>{{ summaryText }}</p>
+      </div>
     </aside>
 
     <main class="chat-panel">
       <div class="chat-list">
         <div v-if="!messages.length" class="empty-state compact">开始一次普通问答</div>
         <article v-for="(item, index) in messages" :key="index" :class="['chat-message', item.role]">
-          <strong>{{ item.role === "user" ? "我" : "AI" }}</strong>
+          <strong>{{ item.role === "user" ? "我" : "助手" }}</strong>
           <p>{{ item.content }}</p>
         </article>
       </div>
