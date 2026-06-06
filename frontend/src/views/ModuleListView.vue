@@ -44,6 +44,7 @@ const pageSize = ref(10);
 const dialogVisible = ref(false);
 const detailVisible = ref(false);
 const commentVisible = ref(false);
+const bulkScoreVisible = ref(false);
 const editingRow = ref<Row | null>(null);
 const detailRow = ref<Row | null>(null);
 const commentRow = ref<Row | null>(null);
@@ -56,6 +57,8 @@ const commentForm = reactive({
 });
 const commentLoading = ref(false);
 const commentResult = ref<Row | null>(null);
+const bulkScoreText = ref("");
+const bulkScoreLoading = ref(false);
 
 function toQuery(data: Row) {
   const params = new URLSearchParams();
@@ -366,6 +369,7 @@ const moduleKey = computed(() => String(route.meta.module || ""));
 const config = computed(() => configs[moduleKey.value]);
 const canWrite = computed(() => Boolean(config.value?.writePermission && auth.permissions.includes(config.value.writePermission)));
 const canGenerateComment = computed(() => moduleKey.value === "students" && ["admin", "teacher", "consultant"].includes(String(auth.role || "")));
+const canBulkCreateScores = computed(() => moduleKey.value === "scores" && canWrite.value);
 const filteredRows = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase();
   if (!keyword) return rows.value;
@@ -547,6 +551,68 @@ async function copyComment() {
   }
 }
 
+function openBulkScores() {
+  bulkScoreText.value = "";
+  bulkScoreVisible.value = true;
+}
+
+function parseBulkScores() {
+  return bulkScoreText.value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const [studentId, examRound, score, ...remarkParts] = line.split(/[,，\t]/).map((item) => item.trim());
+      if (!studentId || !examRound || !score) {
+        throw new Error(`第 ${index + 1} 行请按“学号,考试轮次,分数,备注”填写`);
+      }
+      const examRoundValue = Number(examRound);
+      const scoreValue = Number(score);
+      if (!Number.isFinite(examRoundValue) || examRoundValue < 1) {
+        throw new Error(`第 ${index + 1} 行考试轮次必须是大于 0 的数字`);
+      }
+      if (!Number.isFinite(scoreValue) || scoreValue < 0 || scoreValue > 100) {
+        throw new Error(`第 ${index + 1} 行分数必须在 0 到 100 之间`);
+      }
+      const item: Row = {
+        student_id: studentId,
+        exam_round: examRoundValue,
+        score: scoreValue,
+      };
+      const remark = remarkParts.join("，").trim();
+      if (remark) item.remark = remark;
+      return item;
+    });
+}
+
+async function submitBulkScores() {
+  let scores: Row[] = [];
+  try {
+    scores = parseBulkScores();
+  } catch (error) {
+    ElMessage.warning(error instanceof Error ? error.message : "批量成绩格式不正确");
+    return;
+  }
+  if (!scores.length) {
+    ElMessage.warning("请至少填写一条成绩");
+    return;
+  }
+  bulkScoreLoading.value = true;
+  try {
+    await request("/score/bulk/", {
+      method: "POST",
+      body: JSON.stringify(scores),
+    });
+    ElMessage.success(`已提交 ${scores.length} 条成绩`);
+    bulkScoreVisible.value = false;
+    await load();
+  } catch (error) {
+    notifyError(error);
+  } finally {
+    bulkScoreLoading.value = false;
+  }
+}
+
 watch(
   () => route.path,
   () => {
@@ -568,6 +634,7 @@ watch(
       <div class="toolbar-actions">
         <el-input v-model="searchKeyword" clearable placeholder="筛选当前页数据" style="width: 220px" />
         <el-button :loading="loading" @click="load">刷新</el-button>
+        <el-button v-if="canBulkCreateScores" @click="openBulkScores">批量新增</el-button>
         <el-button v-if="canWrite && config?.create" type="primary" @click="openCreate">新增</el-button>
       </div>
     </div>
@@ -706,6 +773,23 @@ watch(
       <template #footer>
         <el-button @click="commentVisible = false">关闭</el-button>
         <el-button type="primary" :loading="commentLoading" @click="generateComment">生成评语</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="bulkScoreVisible" title="批量新增成绩" width="720px">
+      <div class="bulk-score-panel">
+        <p>每行一条成绩，格式为：学号,考试轮次,分数,备注。备注可不填。</p>
+        <el-input
+          v-model="bulkScoreText"
+          type="textarea"
+          :rows="10"
+          resize="vertical"
+          placeholder="例如：S202501001,1,86,课堂表现稳定"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="bulkScoreVisible = false">取消</el-button>
+        <el-button type="primary" :loading="bulkScoreLoading" @click="submitBulkScores">提交成绩</el-button>
       </template>
     </el-dialog>
   </section>
