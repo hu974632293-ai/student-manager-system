@@ -7,10 +7,13 @@ import { notifyError, request } from "@/api/http";
 type Row = Record<string, unknown>;
 
 const loading = ref(false);
+const overAgeRows = ref<Row[]>([]);
 const genderRows = ref<Row[]>([]);
+const excellentRows = ref<Row[]>([]);
 const scoreAverageRows = ref<Row[]>([]);
 const failedRows = ref<Row[]>([]);
 const topSalaryRows = ref<Row[]>([]);
+const studentDurationRows = ref<Row[]>([]);
 const durationRows = ref<Row[]>([]);
 const genderChart = ref<HTMLDivElement>();
 const scoreChart = ref<HTMLDivElement>();
@@ -19,17 +22,23 @@ let charts: echarts.ECharts[] = [];
 async function load() {
   loading.value = true;
   try {
-    const [gender, scoreAverage, failed, topSalary, duration] = await Promise.all([
+    const [overAge, gender, excellent, scoreAverage, failed, topSalary, studentDuration, duration] = await Promise.all([
+      request<Row[]>("/statistics/students/over-30"),
       request<Row[]>("/statistics/classes/gender-count"),
+      request<Row[]>("/statistics/scores/all-above-80"),
       request<Row[]>("/statistics/scores/class-average"),
       request<Row[]>("/statistics/scores/failed-more-than-twice"),
       request<Row[]>("/statistics/employment/top5-salary?limit=20"),
+      request<Row[]>("/statistics/employment/student-duration"),
       request<Row[]>("/statistics/employment/class-average-duration"),
     ]);
+    overAgeRows.value = Array.isArray(overAge) ? overAge : [];
     genderRows.value = Array.isArray(gender) ? gender : [];
+    excellentRows.value = Array.isArray(excellent) ? excellent : [];
     scoreAverageRows.value = Array.isArray(scoreAverage) ? scoreAverage : [];
     failedRows.value = Array.isArray(failed) ? failed : [];
     topSalaryRows.value = Array.isArray(topSalary) ? topSalary : [];
+    studentDurationRows.value = Array.isArray(studentDuration) ? studentDuration : [];
     durationRows.value = Array.isArray(duration) ? duration : [];
     await nextTick();
     renderCharts();
@@ -117,6 +126,34 @@ onUnmounted(() => {
     <div class="dashboard-bottom">
       <article class="page-surface">
         <div class="card-title">
+          <h4>年龄大于 30 岁学生</h4>
+          <span>{{ overAgeRows.length }} 条记录</span>
+        </div>
+        <el-table :data="overAgeRows" border height="320">
+          <el-table-column prop="student_id" label="学号" width="130" />
+          <el-table-column prop="name" label="姓名" width="120" />
+          <el-table-column prop="class_id" label="班级" width="120" />
+          <el-table-column prop="age" label="年龄" width="100" />
+          <el-table-column prop="major" label="专业" min-width="160" show-overflow-tooltip />
+        </el-table>
+      </article>
+      <article class="page-surface">
+        <div class="card-title">
+          <h4>全科优秀成绩明细</h4>
+          <span>默认筛选所有成绩不低于 80 分的学生</span>
+        </div>
+        <el-table :data="excellentRows" border height="320">
+          <el-table-column prop="student_id" label="学号" width="130" />
+          <el-table-column prop="name" label="姓名" width="120" />
+          <el-table-column prop="exam_round" label="考试轮次" width="120" />
+          <el-table-column prop="score" label="分数" width="120" />
+        </el-table>
+      </article>
+    </div>
+
+    <div class="dashboard-bottom">
+      <article class="page-surface">
+        <div class="card-title">
           <h4>挂科风险</h4>
           <span>默认低于 60 分且次数超过 2 次</span>
         </div>
@@ -141,15 +178,29 @@ onUnmounted(() => {
       </article>
     </div>
 
-    <article class="page-surface">
-      <div class="card-title">
-        <h4>班级平均就业时长</h4>
-        <span>基于 offer 日期与开岗日期计算</span>
-      </div>
-      <el-table :data="durationRows" border height="300">
-        <el-table-column prop="class_name" label="班级" min-width="160" />
-        <el-table-column prop="average_duration_days" label="平均就业时长（天）" min-width="180" />
-      </el-table>
-    </article>
+    <div class="dashboard-bottom">
+      <article class="page-surface">
+        <div class="card-title">
+          <h4>学生就业时长</h4>
+          <span>基于 offer 日期与开岗日期计算</span>
+        </div>
+        <el-table :data="studentDurationRows" border height="300">
+          <el-table-column prop="student_id" label="学号" width="130" />
+          <el-table-column prop="name" label="姓名" width="120" />
+          <el-table-column prop="class_name" label="班级" min-width="140" />
+          <el-table-column prop="duration_days" label="就业时长（天）" min-width="160" />
+        </el-table>
+      </article>
+      <article class="page-surface">
+        <div class="card-title">
+          <h4>班级平均就业时长</h4>
+          <span>按班级汇总就业效率</span>
+        </div>
+        <el-table :data="durationRows" border height="300">
+          <el-table-column prop="class_name" label="班级" min-width="160" />
+          <el-table-column prop="average_duration_days" label="平均就业时长（天）" min-width="180" />
+        </el-table>
+      </article>
+    </div>
   </section>
 </template>
