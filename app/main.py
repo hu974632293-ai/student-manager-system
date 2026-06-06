@@ -154,6 +154,7 @@ async def dashboard_page():
 async def frontend_page(frontend_path: str):
     frontend_routes = {
         "login",
+        "profile",
         "students",
         "classes",
         "teachers",

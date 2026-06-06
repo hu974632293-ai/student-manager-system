@@ -27,6 +27,12 @@ const routes: RouteRecordRaw[] = [
         meta: { module: "students" },
       },
       {
+        path: "profile",
+        name: "profile",
+        component: () => import("@/views/ProfileView.vue"),
+        meta: { module: "profile" },
+      },
+      {
         path: "classes",
         name: "classes",
         component: () => import("@/views/ModuleListView.vue"),

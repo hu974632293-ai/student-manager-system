@@ -31,6 +31,14 @@ export const modules: MenuModule[] = [
     roles: ["admin", "teacher", "consultant"],
   },
   {
+    key: "profile",
+    title: "个人信息",
+    subtitle: "账号身份、学生档案与当前权限",
+    route: "/profile",
+    icon: "UserFilled",
+    roles: ["student"],
+  },
+  {
     key: "classes",
     title: "班级管理",
     subtitle: "班级信息与授课关系",

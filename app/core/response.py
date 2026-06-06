@@ -20,6 +20,7 @@ MESSAGE_MAP = {
     "student not found": "学生不存在",
     "student_id is required": "请填写学号",
     "unsupported comment style": "不支持的评语类型",
+    "comment generated": "学生评语生成成功",
     "classes found": "班级列表获取成功",
     "class found": "班级信息获取成功",
     "class created": "班级创建成功",

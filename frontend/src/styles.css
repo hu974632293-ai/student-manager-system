@@ -212,6 +212,11 @@ a {
   gap: 20px;
 }
 
+.profile-page {
+  display: grid;
+  gap: 16px;
+}
+
 .hero-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -376,6 +381,12 @@ a {
 
 .shortcut-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .shortcut-card strong,
