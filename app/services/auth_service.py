@@ -140,6 +140,8 @@ class AuthService:
                         )
                     )
                 else:
+                    if not AuthService.verify_password(password, user.password_hash):
+                        user.password_hash = AuthService.hash_password(password)
                     if user.teacher_id is None and teacher_id is not None:
                         user.teacher_id = teacher_id
                     if user.student_id is None and student_id is not None:
@@ -163,9 +165,10 @@ class AuthService:
 
     @staticmethod
     def login(db: Session, payload: LoginRequest):
-        user = db.query(User).filter(User.username == payload.username, User.is_active == True).first()
+        username = payload.username.strip()
+        user = db.query(User).filter(User.username == username, User.is_active == True).first()
         if not user or not AuthService.verify_password(payload.password, user.password_hash):
-            return fail("bad username or password")
+            return fail("账号或密码错误")
         return success(
             LoginResponse(access_token=AuthService.create_access_token(user), user=AuthService.user_out(user)),
             "login success",
