@@ -167,8 +167,6 @@ async def frontend_page(frontend_path: str):
         "logs",
         "ai-chat",
         "data-query",
-        "knowledge-base",
-        "agents",
         "permissions",
         "forbidden",
     }

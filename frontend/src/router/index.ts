@@ -99,18 +99,6 @@ const routes: RouteRecordRaw[] = [
         meta: { module: "data-query" },
       },
       {
-        path: "knowledge-base",
-        name: "knowledge-base",
-        component: () => import("@/views/WorkbenchView.vue"),
-        meta: { module: "knowledge-base" },
-      },
-      {
-        path: "agents",
-        name: "agents",
-        component: () => import("@/views/WorkbenchView.vue"),
-        meta: { module: "agents" },
-      },
-      {
         path: "permissions",
         name: "permissions",
         component: () => import("@/views/PermissionsView.vue"),

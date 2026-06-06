@@ -23,8 +23,6 @@ ROLE_MODULES: dict[str, list[str]] = {
         "geocode",
         "ai-chat",
         "data-query",
-        "knowledge-base",
-        "agents",
         "permissions",
     ],
     ROLE_TEACHER: [
@@ -38,8 +36,6 @@ ROLE_MODULES: dict[str, list[str]] = {
         "weather",
         "geocode",
         "ai-chat",
-        "knowledge-base",
-        "agents",
     ],
     ROLE_STUDENT: [
         "overview",
@@ -49,8 +45,6 @@ ROLE_MODULES: dict[str, list[str]] = {
         "weather",
         "geocode",
         "ai-chat",
-        "knowledge-base",
-        "agents",
     ],
     ROLE_CONSULTANT: [
         "overview",
@@ -60,7 +54,6 @@ ROLE_MODULES: dict[str, list[str]] = {
         "weather",
         "geocode",
         "ai-chat",
-        "knowledge-base",
     ],
 }
 
@@ -83,9 +76,6 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "geocode:use",
         "ai-chat:use",
         "data-query:use",
-        "knowledge-base:use",
-        "knowledge-base:manage",
-        "agents:use",
         "permissions:manage",
     ],
     ROLE_TEACHER: [
@@ -101,8 +91,6 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "weather:use",
         "geocode:use",
         "ai-chat:use",
-        "knowledge-base:use",
-        "agents:use",
     ],
     ROLE_STUDENT: [
         "profile:read",
@@ -111,8 +99,6 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "weather:use",
         "geocode:use",
         "ai-chat:use",
-        "knowledge-base:use",
-        "agents:use",
     ],
     ROLE_CONSULTANT: [
         "students:read",
@@ -122,7 +108,6 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "weather:use",
         "geocode:use",
         "ai-chat:use",
-        "knowledge-base:use",
     ],
 }
 
