@@ -266,6 +266,22 @@ const visibleFields = computed(() =>
     return true;
   }),
 );
+const detailItems = computed(() => {
+  if (!detailRow.value || !config.value) return [];
+  return config.value.columns
+    .filter((column) => Object.prototype.hasOwnProperty.call(detailRow.value, column.key))
+    .map((column) => ({
+      key: column.key,
+      label: column.label,
+      value: formatValue(detailRow.value?.[column.key]),
+    }));
+});
+
+function formatValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "boolean") return value ? "是" : "否";
+  return String(value);
+}
 
 async function load() {
   if (!config.value) return;
@@ -345,9 +361,18 @@ async function remove(row: Row) {
   }
 }
 
-function copyJson(row: Row) {
-  navigator.clipboard.writeText(JSON.stringify(row, null, 2));
-  ElMessage.success("已复制");
+async function copyDetail(row: Row) {
+  if (!config.value) return;
+  const text = config.value.columns
+    .filter((column) => Object.prototype.hasOwnProperty.call(row, column.key))
+    .map((column) => `${column.label}：${formatValue(row[column.key])}`)
+    .join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    ElMessage.success("详情已复制");
+  } catch {
+    ElMessage.error("复制失败，请手动选择详情内容");
+  }
 }
 
 function openDetail(row: Row) {
@@ -391,7 +416,7 @@ watch(
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-          <el-button link type="primary" @click="copyJson(row)">复制</el-button>
+          <el-button link type="primary" @click="copyDetail(row)">复制详情</el-button>
           <el-button v-if="canWrite && config?.update" link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button v-if="canWrite && config?.remove" link type="danger" @click="remove(row)">删除</el-button>
         </template>
@@ -452,8 +477,8 @@ watch(
 
     <el-drawer v-model="detailVisible" title="记录详情" size="520px">
       <el-descriptions v-if="detailRow" :column="1" border>
-        <el-descriptions-item v-for="(value, key) in detailRow" :key="String(key)" :label="String(key)">
-          {{ value ?? "-" }}
+        <el-descriptions-item v-for="item in detailItems" :key="item.key" :label="item.label">
+          {{ item.value }}
         </el-descriptions-item>
       </el-descriptions>
     </el-drawer>

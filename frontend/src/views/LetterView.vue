@@ -16,6 +16,10 @@ interface LetterResult {
 const loading = ref(false);
 const sending = ref(false);
 const result = ref<LetterResult | null>(null);
+const methodLabels: Record<string, string> = {
+  chat: "对话生成",
+  generate: "文本生成",
+};
 const form = reactive({
   mode: "direct",
   recipient: "assistant_teacher",
@@ -40,6 +44,10 @@ function payload(includeEmail: boolean) {
   }
   if (form.mode === "direct") data.content = form.content;
   return data;
+}
+
+function methodLabel(method?: string) {
+  return method ? methodLabels[method] || method : "-";
 }
 
 async function generate() {
@@ -144,7 +152,7 @@ async function send() {
         <el-descriptions-item label="收件人">{{ result.to_email || "-" }}</el-descriptions-item>
         <el-descriptions-item label="主题">{{ result.subject || form.subject }}</el-descriptions-item>
         <el-descriptions-item label="对象">{{ result.recipient_name }}</el-descriptions-item>
-        <el-descriptions-item label="方法">{{ result.method }}</el-descriptions-item>
+        <el-descriptions-item label="生成方式">{{ methodLabel(result.method) }}</el-descriptions-item>
       </el-descriptions>
       <pre v-if="result" class="result-pre">{{ result.content }}</pre>
       <div v-else class="empty-state compact">暂无发送或生成结果</div>
