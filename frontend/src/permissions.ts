@@ -150,7 +150,7 @@ export const modules: MenuModule[] = [
   {
     key: "permissions",
     title: "权限矩阵",
-    subtitle: "第一版角色模块与权限点总览",
+    subtitle: "当前角色模块与权限点总览",
     route: "/permissions",
     icon: "Lock",
     group: "tools",

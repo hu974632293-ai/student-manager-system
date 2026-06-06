@@ -237,7 +237,7 @@ class DataQueryService:
             normalized,
         ):
             if alias not in cls.sql_keywords:
-                raise ValueError("第一版智能问数暂不支持 SQL 表别名")
+                raise ValueError("智能问数暂不支持 SQL 表别名")
 
     @staticmethod
     def _strip_trailing_limit(sql: str) -> str:

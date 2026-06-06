@@ -13,7 +13,7 @@ const visibleModules = computed(() => modules.filter((item) => !item.hidden));
     <div class="section-heading">
       <div>
         <h3>权限矩阵</h3>
-        <p>第一版以只读方式展示角色可访问模块；真实安全边界仍由后端依赖和 service 数据范围控制。</p>
+        <p>按当前权限配置展示角色可访问模块；真实安全边界由后端依赖和 service 数据范围控制。</p>
       </div>
     </div>
 
