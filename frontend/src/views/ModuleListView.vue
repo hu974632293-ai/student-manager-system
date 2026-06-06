@@ -43,11 +43,19 @@ const page = ref(1);
 const pageSize = ref(10);
 const dialogVisible = ref(false);
 const detailVisible = ref(false);
+const commentVisible = ref(false);
 const editingRow = ref<Row | null>(null);
 const detailRow = ref<Row | null>(null);
+const commentRow = ref<Row | null>(null);
 const searchKeyword = ref("");
 const form = reactive<Row>({});
 const filterForm = reactive<Row>({});
+const commentForm = reactive({
+  style: "正式",
+  extra_notes: "",
+});
+const commentLoading = ref(false);
+const commentResult = ref<Row | null>(null);
 
 function toQuery(data: Row) {
   const params = new URLSearchParams();
@@ -357,6 +365,7 @@ const configs: Record<string, ModuleConfig> = {
 const moduleKey = computed(() => String(route.meta.module || ""));
 const config = computed(() => configs[moduleKey.value]);
 const canWrite = computed(() => Boolean(config.value?.writePermission && auth.permissions.includes(config.value.writePermission)));
+const canGenerateComment = computed(() => moduleKey.value === "students" && ["admin", "teacher", "consultant"].includes(String(auth.role || "")));
 const filteredRows = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase();
   if (!keyword) return rows.value;
@@ -496,6 +505,48 @@ function openDetail(row: Row) {
   detailVisible.value = true;
 }
 
+function openComment(row: Row) {
+  commentRow.value = row;
+  commentResult.value = null;
+  commentForm.style = "正式";
+  commentForm.extra_notes = "";
+  commentVisible.value = true;
+}
+
+async function generateComment() {
+  if (!commentRow.value?.student_id) {
+    ElMessage.warning("缺少学生学号，无法生成评语");
+    return;
+  }
+  commentLoading.value = true;
+  try {
+    commentResult.value = await request<Row>("/students/comment", {
+      method: "POST",
+      body: JSON.stringify({
+        student_id: commentRow.value.student_id,
+        style: commentForm.style,
+        extra_notes: commentForm.extra_notes || undefined,
+      }),
+    });
+    ElMessage.success("评语生成成功");
+  } catch (error) {
+    notifyError(error);
+  } finally {
+    commentLoading.value = false;
+  }
+}
+
+async function copyComment() {
+  const text = String(commentResult.value?.comment || "");
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    ElMessage.success("评语已复制");
+  } catch {
+    ElMessage.error("复制失败，请手动选择评语内容");
+  }
+}
+
 watch(
   () => route.path,
   () => {
@@ -550,10 +601,11 @@ watch(
         min-width="130"
         show-overflow-tooltip
       />
-      <el-table-column label="操作" width="180" fixed="right">
+      <el-table-column label="操作" width="260" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openDetail(row)">详情</el-button>
           <el-button link type="primary" @click="copyDetail(row)">复制详情</el-button>
+          <el-button v-if="canGenerateComment" link type="primary" @click="openComment(row)">生成评语</el-button>
           <el-button v-if="canWrite && config?.update" link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button v-if="canWrite && config?.remove" link type="danger" @click="remove(row)">删除</el-button>
         </template>
@@ -619,5 +671,42 @@ watch(
         </el-descriptions-item>
       </el-descriptions>
     </el-drawer>
+
+    <el-dialog v-model="commentVisible" title="生成学生评语" width="680px">
+      <el-form label-position="top">
+        <el-form-item label="学生">
+          <el-input :model-value="`${commentRow?.name || '-'}（${commentRow?.student_id || '-'}）`" disabled />
+        </el-form-item>
+        <el-form-item label="评语口吻">
+          <el-select v-model="commentForm.style" class="full-input">
+            <el-option label="正式" value="正式" />
+            <el-option label="鼓励" value="鼓励" />
+            <el-option label="简洁" value="简洁" />
+            <el-option label="详细" value="详细" />
+            <el-option label="班主任口吻" value="班主任口吻" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="补充表现">
+          <el-input
+            v-model="commentForm.extra_notes"
+            type="textarea"
+            :rows="3"
+            resize="none"
+            placeholder="例如：近期作业完成稳定，课堂互动更积极"
+          />
+        </el-form-item>
+      </el-form>
+      <div v-if="commentResult" class="comment-result">
+        <div class="card-title">
+          <h4>{{ commentResult.name }}的评语</h4>
+          <el-button link type="primary" @click="copyComment">复制评语</el-button>
+        </div>
+        <p>{{ commentResult.comment }}</p>
+      </div>
+      <template #footer>
+        <el-button @click="commentVisible = false">关闭</el-button>
+        <el-button type="primary" :loading="commentLoading" @click="generateComment">生成评语</el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
