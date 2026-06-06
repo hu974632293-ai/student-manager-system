@@ -12,11 +12,27 @@ const CLIENT_ERROR_MAP: Record<string, string> = {
 
 export class ApiError extends Error {
   status: number;
+  data: unknown;
 
-  constructor(message: string, status = 0) {
+  constructor(message: string, status = 0, data?: unknown) {
     super(message);
     this.status = status;
+    this.data = data;
   }
+}
+
+function formatErrorMessage(payload: ApiEnvelope<unknown> | null, fallback: string) {
+  if (!payload) return fallback;
+  const details = Array.isArray(payload.data)
+    ? payload.data
+        .map((item) => {
+          if (item && typeof item === "object" && "msg" in item) return String((item as { msg?: unknown }).msg || "");
+          return "";
+        })
+        .filter(Boolean)
+    : [];
+  if (details.length) return details.slice(0, 3).join("；");
+  return payload.msg || fallback;
 }
 
 export function getToken() {
@@ -55,10 +71,10 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
     throw new ApiError("服务响应格式异常，请稍后重试", response.status);
   }
   if (!response.ok) {
-    throw new ApiError(payload?.msg || "请求失败，请稍后重试", response.status);
+    throw new ApiError(formatErrorMessage(payload as ApiEnvelope<unknown> | null, "请求失败，请稍后重试"), response.status, payload?.data);
   }
   if (payload.code !== 1) {
-    throw new ApiError(payload.msg || "业务处理失败，请检查输入后重试", response.status);
+    throw new ApiError(formatErrorMessage(payload as ApiEnvelope<unknown> | null, "业务处理失败，请检查输入后重试"), response.status, payload.data);
   }
   return payload.data;
 }
