@@ -26,7 +26,8 @@ interface ModuleConfig {
   writePermission?: string;
   columns: TableColumn[];
   fields: FormField[];
-  list: (page: number, size: number) => Promise<{ rows: Row[]; total: number }>;
+  filters?: FormField[];
+  list: (page: number, size: number, filters?: Row) => Promise<{ rows: Row[]; total: number }>;
   create?: (form: Row) => Promise<unknown>;
   update?: (row: Row, form: Row) => Promise<unknown>;
   remove?: (row: Row) => Promise<unknown>;
@@ -46,6 +47,7 @@ const editingRow = ref<Row | null>(null);
 const detailRow = ref<Row | null>(null);
 const searchKeyword = ref("");
 const form = reactive<Row>({});
+const filterForm = reactive<Row>({});
 
 function toQuery(data: Row) {
   const params = new URLSearchParams();
@@ -80,6 +82,50 @@ async function jsonRequest(url: string, method: string, body?: Row) {
   });
 }
 
+function normalizeFilterForm(fields: FormField[] = []) {
+  Object.keys(filterForm).forEach((key) => delete filterForm[key]);
+  fields.forEach((field) => {
+    filterForm[field.key] = "";
+  });
+}
+
+function cleanFilters() {
+  const filters: Row = {};
+  Object.entries(filterForm).forEach(([key, value]) => {
+    if (value !== "" && value !== undefined && value !== null) filters[key] = value;
+  });
+  return filters;
+}
+
+function hasFilters(filters: Row) {
+  return Object.keys(filters).length > 0;
+}
+
+function paginateLocalRows(items: Row[], currentPage: number, size: number) {
+  const start = (currentPage - 1) * size;
+  return { rows: items.slice(start, start + size), total: items.length };
+}
+
+function uniqueRows(items: Row[], key: string) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const value = String(item[key] ?? "");
+    if (!value || seen.has(value)) return false;
+    seen.add(value);
+    return true;
+  });
+}
+
+function filterJobRows(items: Row[], filters: Row) {
+  return items.filter((item) => {
+    if (filters.student_id && String(item.student_id) !== String(filters.student_id)) return false;
+    if (filters.class_name && String(item.class_name) !== String(filters.class_name)) return false;
+    if (filters.min_salary !== undefined && Number(item.salary ?? 0) < Number(filters.min_salary)) return false;
+    if (filters.max_salary !== undefined && Number(item.salary ?? 0) > Number(filters.max_salary)) return false;
+    return true;
+  });
+}
+
 const configs: Record<string, ModuleConfig> = {
   students: {
     title: "学生管理",
@@ -108,7 +154,22 @@ const configs: Record<string, ModuleConfig> = {
       { key: "graduation_date", label: "毕业日期", type: "date" },
       { key: "consultant_id", label: "顾问教师ID", type: "number" },
     ],
-    async list(currentPage, size) {
+    filters: [
+      { key: "student_id", label: "学号" },
+      { key: "student_name", label: "姓名" },
+      { key: "class_id", label: "班级ID", type: "number" },
+    ],
+    async list(currentPage, size, filters = {}) {
+      if (hasFilters(filters)) {
+        const data = await request<{ select_id?: Row | null; select_name?: Row | null; class_id?: Row[] }>(
+          `/students/one?${toQuery(filters)}`,
+        );
+        const items = uniqueRows(
+          [data.select_id, data.select_name, ...(data.class_id || [])].filter(Boolean) as Row[],
+          "student_id",
+        );
+        return paginateLocalRows(items, currentPage, size);
+      }
       const data = await request<{ students?: Row[]; total?: number }>(
         `/students?skip=${(currentPage - 1) * size}&limit=${size}`,
       );
@@ -193,9 +254,34 @@ const configs: Record<string, ModuleConfig> = {
       { key: "score", label: "分数", type: "number" },
       { key: "remark", label: "备注", type: "textarea" },
     ],
-    async list(currentPage, size) {
+    filters: [
+      { key: "student_id", label: "学号" },
+      { key: "exam_round", label: "考试轮次", type: "number" },
+      { key: "min_score", label: "最低分", type: "number" },
+      { key: "max_score", label: "最高分", type: "number" },
+    ],
+    async list(currentPage, size, filters = {}) {
+      if (filters.min_score !== undefined || filters.max_score !== undefined) {
+        const params = new URLSearchParams({
+          min_score: String(filters.min_score ?? 0),
+          max_score: String(filters.max_score ?? 100),
+          page: String(currentPage),
+          page_size: String(size),
+        });
+        const data = await request<{ items?: Row[]; total?: number }>(`/score/range/?${params.toString()}`);
+        let items = data.items || [];
+        if (filters.student_id) items = items.filter((item) => String(item.student_id) === String(filters.student_id));
+        if (filters.exam_round) items = items.filter((item) => Number(item.exam_round) === Number(filters.exam_round));
+        return { rows: items, total: Number(data.total || items.length) };
+      }
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        page_size: String(size),
+      });
+      if (filters.student_id) params.set("student_id", String(filters.student_id));
+      if (filters.exam_round) params.set("exam_round", String(filters.exam_round));
       const data = await request<{ items?: Row[]; total?: number }>(
-        `/score/query/?page=${currentPage}&page_size=${size}`,
+        `/score/query/?${params.toString()}`,
       );
       return { rows: data.items || [], total: Number(data.total || 0) };
     },
@@ -226,7 +312,24 @@ const configs: Record<string, ModuleConfig> = {
       { key: "position", label: "岗位" },
       { key: "salary", label: "薪资", type: "number", required: true },
     ],
-    async list(currentPage, size) {
+    filters: [
+      { key: "student_id", label: "学号" },
+      { key: "class_name", label: "班级" },
+      { key: "min_salary", label: "最低薪资", type: "number" },
+      { key: "max_salary", label: "最高薪资", type: "number" },
+    ],
+    async list(currentPage, size, filters = {}) {
+      if (hasFilters(filters)) {
+        let items: Row[] = [];
+        if (filters.student_id) {
+          items = await request<Row[]>(`/employment/students/${encodeURIComponent(String(filters.student_id))}`);
+        } else if (filters.class_name) {
+          items = await request<Row[]>(`/employment/class/${encodeURIComponent(String(filters.class_name))}`);
+        } else {
+          items = await request<Row[]>(`/jobs/salary-range?${toQuery(filters)}`);
+        }
+        return paginateLocalRows(filterJobRows(items || [], filters), currentPage, size);
+      }
       const data = await request<{ list?: Row[]; total?: number }>(`/jobs/page?page=${currentPage}&size=${size}`);
       return { rows: data.list || [], total: Number(data.total || 0) };
     },
@@ -266,6 +369,7 @@ const visibleFields = computed(() =>
     return true;
   }),
 );
+const filterFields = computed(() => config.value?.filters || []);
 const detailItems = computed(() => {
   if (!detailRow.value || !config.value) return [];
   return config.value.columns
@@ -287,7 +391,7 @@ async function load() {
   if (!config.value) return;
   loading.value = true;
   try {
-    const data = await config.value.list(page.value, pageSize.value);
+    const data = await config.value.list(page.value, pageSize.value, cleanFilters());
     rows.value = data.rows;
     total.value = data.total;
   } catch (error) {
@@ -297,6 +401,18 @@ async function load() {
   } finally {
     loading.value = false;
   }
+}
+
+async function applyFilters() {
+  page.value = 1;
+  await load();
+}
+
+async function resetFilters() {
+  normalizeFilterForm(filterFields.value);
+  searchKeyword.value = "";
+  page.value = 1;
+  await load();
 }
 
 function openCreate() {
@@ -384,6 +500,7 @@ watch(
   () => route.path,
   () => {
     page.value = 1;
+    normalizeFilterForm(config.value?.filters);
     load();
   },
   { immediate: true },
@@ -402,6 +519,26 @@ watch(
         <el-button :loading="loading" @click="load">刷新</el-button>
         <el-button v-if="canWrite && config?.create" type="primary" @click="openCreate">新增</el-button>
       </div>
+    </div>
+
+    <div v-if="filterFields.length" class="filter-bar">
+      <el-form label-position="top">
+        <div class="filter-grid">
+          <el-form-item v-for="field in filterFields" :key="field.key" :label="field.label">
+            <el-input-number
+              v-if="field.type === 'number'"
+              v-model="filterForm[field.key]"
+              controls-position="right"
+              class="full-input"
+            />
+            <el-input v-else v-model="filterForm[field.key]" clearable />
+          </el-form-item>
+          <div class="filter-actions">
+            <el-button type="primary" :loading="loading" @click="applyFilters">查询</el-button>
+            <el-button @click="resetFilters">重置</el-button>
+          </div>
+        </div>
+      </el-form>
     </div>
 
     <el-table :data="filteredRows" border stripe v-loading="loading" height="560" empty-text="暂无数据">
