@@ -6,7 +6,11 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core import security
 from app.dao.refresh_token import refresh_token_dao
+from app.models.classes import Class
+from app.models.class_teacher_link import class_teacher_link
 from app.models.refresh_token import UserRefreshToken
+from app.models.student import Student
+from app.models.teacher import Teacher
 from app.models.user import User
 from app.services.auth_service import AuthService
 from app.services.token_service import TokenService
@@ -31,6 +35,16 @@ def make_db():
     TestingSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     User.__table__.create(engine)
     UserRefreshToken.__table__.create(engine)
+    return TestingSession()
+
+
+def make_scope_db():
+    engine = create_engine("sqlite:///:memory:")
+    TestingSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Teacher.__table__.create(engine)
+    Class.__table__.create(engine)
+    class_teacher_link.create(engine)
+    Student.__table__.create(engine)
     return TestingSession()
 
 
@@ -131,6 +145,29 @@ def test_login_returns_access_and_refresh_tokens():
     assert result["data"].access_token
     assert result["data"].refresh_token
     assert result["data"].token_type == "bearer"
+
+
+def test_default_teacher_bindings_prefer_non_empty_scopes():
+    db = make_scope_db()
+    db.add_all(
+        [
+            Teacher(id=1, teacher_number="T001", name="空范围教师", is_deleted=False),
+            Teacher(id=2, teacher_number="T002", name="授课教师", is_deleted=False),
+            Teacher(id=3, teacher_number="T003", name="顾问教师", is_deleted=False),
+            Class(id=1, class_id="C001", is_deleted=False),
+            Student(student_id="S001", class_id=1, name="测试学生", consultant_id=3, is_deleted=False),
+        ]
+    )
+    db.flush()
+    db.execute(class_teacher_link.insert().values(class_id=1, teacher_id=2))
+    db.commit()
+
+    assert AuthService._first_teacher_with_classes_id(db) == 2
+    assert AuthService._first_teacher_with_consultant_students_id(db) == 3
+    assert AuthService._teacher_has_classes(db, 1) is False
+    assert AuthService._teacher_has_classes(db, 2) is True
+    assert AuthService._teacher_has_consultant_students(db, 1) is False
+    assert AuthService._teacher_has_consultant_students(db, 3) is True
 
 
 def test_refresh_rotates_token_and_rejects_old_token():

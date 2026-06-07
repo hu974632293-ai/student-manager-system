@@ -8,6 +8,7 @@ from app.core.database import Base, engine, get_db
 from app.core.permissions import get_modules_for_role, get_permissions_for_role
 from app.core.response import fail, success
 from app.core.schema_compat import ensure_user_identity_columns
+from app.models.class_teacher_link import class_teacher_link
 from app.models.student import Student
 from app.models.teacher import Teacher
 from app.models.user import User
@@ -49,6 +50,57 @@ class AuthService:
         return db.query(User).filter(User.username == payload["sub"], User.is_active == True).first()
 
     @staticmethod
+    def _first_active_teacher_id(db: Session) -> int | None:
+        teacher = db.query(Teacher).filter(Teacher.is_deleted == False).order_by(Teacher.id).first()
+        return teacher.id if teacher else None
+
+    @staticmethod
+    def _first_teacher_with_classes_id(db: Session) -> int | None:
+        row = (
+            db.query(Teacher.id)
+            .join(class_teacher_link, Teacher.id == class_teacher_link.c.teacher_id)
+            .filter(Teacher.is_deleted == False)
+            .group_by(Teacher.id)
+            .order_by(Teacher.id)
+            .first()
+        )
+        return row[0] if row else AuthService._first_active_teacher_id(db)
+
+    @staticmethod
+    def _first_teacher_with_consultant_students_id(db: Session) -> int | None:
+        row = (
+            db.query(Teacher.id)
+            .join(Student, Student.consultant_id == Teacher.id)
+            .filter(Teacher.is_deleted == False, Student.is_deleted == False)
+            .group_by(Teacher.id)
+            .order_by(Teacher.id)
+            .first()
+        )
+        return row[0] if row else AuthService._first_active_teacher_id(db)
+
+    @staticmethod
+    def _teacher_has_classes(db: Session, teacher_id: int | None) -> bool:
+        if teacher_id is None:
+            return False
+        return (
+            db.query(class_teacher_link.c.teacher_id)
+            .filter(class_teacher_link.c.teacher_id == teacher_id)
+            .first()
+            is not None
+        )
+
+    @staticmethod
+    def _teacher_has_consultant_students(db: Session, teacher_id: int | None) -> bool:
+        if teacher_id is None:
+            return False
+        return (
+            db.query(Student.student_id)
+            .filter(Student.consultant_id == teacher_id, Student.is_deleted == False)
+            .first()
+            is not None
+        )
+
+    @staticmethod
     def ensure_default_users() -> None:
         for attempt in range(5):
             try:
@@ -65,16 +117,16 @@ class AuthService:
         ensure_user_identity_columns()
         db = next(get_db())
         try:
-            demo_teacher = db.query(Teacher).filter(Teacher.is_deleted == False).order_by(Teacher.id).first()
             demo_student = db.query(Student).filter(Student.is_deleted == False).order_by(Student.id).first()
-            demo_teacher_id = demo_teacher.id if demo_teacher else None
+            demo_teacher_id = AuthService._first_teacher_with_classes_id(db)
+            demo_consultant_id = AuthService._first_teacher_with_consultant_students_id(db)
             demo_student_id = demo_student.student_id if demo_student else None
         finally:
             db.close()
         defaults = [
             ("admin", "admin123", "System Admin", "admin", None, None),
             ("teacher", "teacher123", "Demo Teacher", "teacher", demo_teacher_id, None),
-            ("consultant", "consultant123", "Consultant", "consultant", demo_teacher_id, None),
+            ("consultant", "consultant123", "Consultant", "consultant", demo_consultant_id, None),
             ("student", "student123", "Demo Student", "student", None, demo_student_id),
         ]
         db = next(get_db())
@@ -95,7 +147,12 @@ class AuthService:
                 else:
                     if not AuthService.verify_password(password, user.password_hash):
                         user.password_hash = AuthService.hash_password(password)
-                    if user.teacher_id is None and teacher_id is not None:
+                    should_bind_teacher = user.teacher_id is None
+                    if role == "teacher":
+                        should_bind_teacher = should_bind_teacher or not AuthService._teacher_has_classes(db, user.teacher_id)
+                    if role == "consultant":
+                        should_bind_teacher = should_bind_teacher or not AuthService._teacher_has_consultant_students(db, user.teacher_id)
+                    if should_bind_teacher and teacher_id is not None:
                         user.teacher_id = teacher_id
                     if user.student_id is None and student_id is not None:
                         user.student_id = student_id
