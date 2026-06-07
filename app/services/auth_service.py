@@ -3,15 +3,23 @@ import time
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from app.core import security
 from app.core.database import Base, engine, get_db
 from app.core.permissions import get_modules_for_role, get_permissions_for_role
 from app.core.response import fail, success
 from app.core.schema_compat import ensure_user_identity_columns
-from app.core import security
 from app.models.student import Student
 from app.models.teacher import Teacher
 from app.models.user import User
-from app.views.schemas.auth import LoginRequest, LoginResponse, UserOut
+from app.services.token_service import TokenService
+from app.views.schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    LoginResponse,
+    LogoutRequest,
+    RefreshTokenRequest,
+    UserOut,
+)
 
 
 class AuthService:
@@ -109,16 +117,47 @@ class AuthService:
         )
 
     @staticmethod
+    def _login_response(user: User, refresh_token: str) -> LoginResponse:
+        return LoginResponse.model_validate(
+            {
+                "access_token": AuthService.create_access_token(user),
+                "refresh_token": refresh_token,
+                "user": AuthService.user_out(user),
+            }
+        )
+
+    @staticmethod
     def login(db: Session, payload: LoginRequest):
         username = payload.username.strip()
         user = db.query(User).filter(User.username == username, User.is_active == True).first()
         if not user or not AuthService.verify_password(payload.password, user.password_hash):
             return fail("账号或密码错误")
-        return success(
-            LoginResponse(access_token=AuthService.create_access_token(user), user=AuthService.user_out(user)),
-            "login success",
-        )
+        refresh_token = TokenService.issue_refresh_token(db, user)
+        return success(AuthService._login_response(user, refresh_token), "login success")
 
     @staticmethod
     def me(user: User):
         return success(AuthService.user_out(user), "current user")
+
+    @staticmethod
+    def refresh(db: Session, payload: RefreshTokenRequest):
+        rotated = TokenService.rotate_refresh_token(db, payload.refresh_token)
+        if rotated is None:
+            return fail("refresh token invalid")
+        user, refresh_token = rotated
+        return success(AuthService._login_response(user, refresh_token), "refresh success")
+
+    @staticmethod
+    def logout(db: Session, payload: LogoutRequest):
+        TokenService.revoke_refresh_token(db, payload.refresh_token)
+        return success(None, "logout success")
+
+    @staticmethod
+    def change_password(db: Session, user: User, payload: ChangePasswordRequest):
+        if not AuthService.verify_password(payload.old_password, user.password_hash):
+            return fail("old password incorrect")
+        if len(payload.new_password) < 6:
+            return fail("new password too short")
+        user.password_hash = AuthService.hash_password(payload.new_password)
+        TokenService.revoke_all_for_user(db, user.id)
+        return success(None, "password changed")

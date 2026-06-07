@@ -7,7 +7,9 @@ from sqlalchemy.orm import sessionmaker
 from app.core import security
 from app.models.refresh_token import UserRefreshToken
 from app.models.user import User
+from app.services.auth_service import AuthService
 from app.services.token_service import TokenService
+from app.views.schemas.auth import ChangePasswordRequest, LoginRequest, LogoutRequest, RefreshTokenRequest
 
 
 def make_user(**overrides):
@@ -100,3 +102,57 @@ def test_refresh_token_rotation_revokes_old_token():
     assert rotated_user.id == user.id
     assert new_plain != old_plain
     assert TokenService.rotate_refresh_token(db, old_plain) is None
+
+
+def test_login_returns_access_and_refresh_tokens():
+    db = make_db()
+    add_user(db, username="admin", real_name="System Admin")
+
+    result = AuthService.login(db, LoginRequest(username=" admin ", password="admin123"))
+
+    assert result["code"] == 1
+    assert result["data"].access_token
+    assert result["data"].refresh_token
+    assert result["data"].token_type == "bearer"
+
+
+def test_refresh_rotates_token_and_rejects_old_token():
+    db = make_db()
+    add_user(db, username="admin", real_name="System Admin")
+    login_result = AuthService.login(db, LoginRequest(username="admin", password="admin123"))
+    old_refresh = login_result["data"].refresh_token
+
+    refresh_result = AuthService.refresh(db, RefreshTokenRequest.model_validate({"refresh_token": old_refresh}))
+
+    assert refresh_result["code"] == 1
+    assert refresh_result["data"].refresh_token != old_refresh
+    assert AuthService.refresh(db, RefreshTokenRequest.model_validate({"refresh_token": old_refresh}))["code"] == 0
+
+
+def test_logout_revokes_refresh_token():
+    db = make_db()
+    add_user(db, username="admin", real_name="System Admin")
+    login_result = AuthService.login(db, LoginRequest(username="admin", password="admin123"))
+    refresh_token = login_result["data"].refresh_token
+
+    logout_result = AuthService.logout(db, LogoutRequest.model_validate({"refresh_token": refresh_token}))
+
+    assert logout_result["code"] == 1
+    assert AuthService.refresh(db, RefreshTokenRequest.model_validate({"refresh_token": refresh_token}))["code"] == 0
+
+
+def test_change_password_revokes_refresh_tokens_and_updates_password():
+    db = make_db()
+    user = add_user(db, username="admin", real_name="System Admin")
+    login_result = AuthService.login(db, LoginRequest(username="admin", password="admin123"))
+    refresh_token = login_result["data"].refresh_token
+
+    change_result = AuthService.change_password(
+        db,
+        user,
+        ChangePasswordRequest(old_password="admin123", new_password="newpass123"),
+    )
+
+    assert change_result["code"] == 1
+    assert AuthService.refresh(db, RefreshTokenRequest.model_validate({"refresh_token": refresh_token}))["code"] == 0
+    assert AuthService.login(db, LoginRequest(username="admin", password="newpass123"))["code"] == 1

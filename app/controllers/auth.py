@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.services.auth_service import AuthService
-from app.views.schemas.auth import LoginRequest
+from app.views.schemas.auth import ChangePasswordRequest, LoginRequest, LogoutRequest, RefreshTokenRequest
 
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
@@ -39,3 +39,22 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @auth_router.get("/me", summary="获取当前登录用户信息")
 def me(user=Depends(get_current_user)):
     return AuthService.me(user)
+
+
+@auth_router.post("/refresh", summary="刷新访问令牌")
+def refresh(payload: RefreshTokenRequest, db: Session = Depends(get_db)):
+    return AuthService.refresh(db, payload)
+
+
+@auth_router.post("/logout", summary="退出登录并撤销刷新令牌")
+def logout(payload: LogoutRequest, db: Session = Depends(get_db)):
+    return AuthService.logout(db, payload)
+
+
+@auth_router.post("/change-password", summary="修改当前用户密码")
+def change_password(
+    payload: ChangePasswordRequest,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return AuthService.change_password(db, user, payload)
