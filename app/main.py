@@ -24,6 +24,7 @@ from app.core.logger import get_logger
 from app.core.logging_middleware import RequestLoggingMiddleware
 from app.core.response import fail
 from app.core.schema_compat import ensure_ai_chat_schema_compat
+from app.models import UserRefreshToken  # noqa: F401
 
 
 logger = get_logger("app")

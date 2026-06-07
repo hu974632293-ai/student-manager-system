@@ -5,4 +5,5 @@ from .score import StudentScore
 from .job import StudentJob
 from .class_teacher_link import class_teacher_link
 from .user import User
+from .refresh_token import UserRefreshToken
 from .ai_chat import AiChatMemory, AiChatMessage, AiChatMessageVector, AiChatSession
