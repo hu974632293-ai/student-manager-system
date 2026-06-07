@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions import get_permissions_for_role
 from app.services.auth_service import AuthService
 from app.views.schemas.auth import ChangePasswordRequest, LoginRequest, LogoutRequest, RefreshTokenRequest
 
@@ -25,6 +26,16 @@ def get_current_user(authorization: Optional[str] = Header(None), db: Session = 
 def require_roles(*roles: str):
     def dependency(user=Depends(get_current_user)):
         if roles and user.role not in roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="permission denied")
+        return user
+
+    return dependency
+
+
+def require_permissions(*permissions: str):
+    def dependency(user=Depends(get_current_user)):
+        user_permissions = set(get_permissions_for_role(user.role))
+        if permissions and not set(permissions).issubset(user_permissions):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="permission denied")
         return user
 
