@@ -84,7 +84,7 @@ function renderCharts() {
       grid: { left: 36, right: 18, top: 28, bottom: 42 },
       xAxis: { type: "category", data: summary.value.class_distribution.map((item) => item.class_id) },
       yAxis: { type: "value" },
-      series: [{ type: "bar", data: summary.value.class_distribution.map((item) => item.student_count), itemStyle: { color: "#0f766e" } }],
+      series: [{ type: "bar", data: summary.value.class_distribution.map((item) => item.student_count), itemStyle: { color: "#158a8a" } }],
     });
     charts.push(chart);
   }
@@ -96,7 +96,7 @@ function renderCharts() {
       grid: { left: 36, right: 18, top: 28, bottom: 42 },
       xAxis: { type: "category", data: summary.value.score_trends.map((item) => `第${item.exam_round}轮`) },
       yAxis: { type: "value", min: 0, max: 100 },
-      series: [{ type: "line", smooth: true, data: summary.value.score_trends.map((item) => item.average_score), itemStyle: { color: "#2563eb" } }],
+      series: [{ type: "line", smooth: true, data: summary.value.score_trends.map((item) => item.average_score), itemStyle: { color: "#f9735b" }, areaStyle: { color: "rgba(249, 115, 91, 0.12)" } }],
     });
     charts.push(chart);
   }
@@ -109,6 +109,7 @@ function renderCharts() {
         {
           type: "pie",
           radius: ["42%", "72%"],
+          color: ["#158a8a", "#123047", "#f9735b", "#67c9c3", "#9dc8c8"],
           data: summary.value.employment_distribution.map((item) => ({ name: item.company_name, value: item.job_count })),
         },
       ],

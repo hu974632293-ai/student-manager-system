@@ -61,8 +61,8 @@ function renderCharts() {
       xAxis: { type: "category", data: genderRows.value.map((item) => item.class_id) },
       yAxis: { type: "value" },
       series: [
-        { name: "男", type: "bar", stack: "gender", data: genderRows.value.map((item) => item.male_count || 0) },
-        { name: "女", type: "bar", stack: "gender", data: genderRows.value.map((item) => item.female_count || 0) },
+        { name: "男", type: "bar", stack: "gender", data: genderRows.value.map((item) => item.male_count || 0), itemStyle: { color: "#158a8a" } },
+        { name: "女", type: "bar", stack: "gender", data: genderRows.value.map((item) => item.female_count || 0), itemStyle: { color: "#f9735b" } },
       ],
     });
     charts.push(chart);
@@ -75,7 +75,7 @@ function renderCharts() {
       grid: { left: 36, right: 18, top: 28, bottom: 64 },
       xAxis: { type: "category", data: rows.map((item) => `${item.class_id}-第${item.exam_round}轮`), axisLabel: { rotate: 35 } },
       yAxis: { type: "value", min: 0, max: 100 },
-      series: [{ type: "line", smooth: true, data: rows.map((item) => item.average_score || 0), itemStyle: { color: "#0f766e" } }],
+      series: [{ type: "line", smooth: true, data: rows.map((item) => item.average_score || 0), itemStyle: { color: "#158a8a" }, areaStyle: { color: "rgba(21, 138, 138, 0.12)" } }],
     });
     charts.push(chart);
   }
