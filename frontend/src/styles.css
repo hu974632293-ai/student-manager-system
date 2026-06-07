@@ -241,39 +241,14 @@ a {
   justify-content: space-between;
   padding: 0 28px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 251, 251, 0.98) 58%, rgba(228, 244, 242, 0.94) 100%);
-  border-bottom: 1px solid rgba(21, 138, 138, 0.18);
-  box-shadow: 0 8px 22px rgba(18, 48, 71, 0.05);
-}
-
-.dashboard-route .topbar {
-  background:
-    linear-gradient(90deg, rgba(236, 249, 248, 0.92), rgba(225, 243, 250, 0.78)),
+    linear-gradient(90deg, rgba(246, 252, 252, 0.95), rgba(225, 243, 250, 0.82)),
     url("./assets/dashboard-header-bg.png") center top / cover no-repeat;
   border-bottom-color: rgba(21, 138, 138, 0.08);
-  box-shadow: none;
+  box-shadow: 0 10px 24px rgba(18, 48, 71, 0.04);
 }
 
 .dashboard-route .content {
   padding-top: 0;
-}
-
-.dashboard-route .title-block h2 {
-  color: var(--color-ink-strong);
-  font-size: 29px;
-  font-weight: 820;
-  letter-spacing: 0;
-}
-
-.dashboard-route .title-block p {
-  color: #416b7e;
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.dashboard-route .user-button {
-  background: rgba(255, 255, 255, 0.44);
-  backdrop-filter: blur(10px);
 }
 
 .topbar-actions {
@@ -284,7 +259,8 @@ a {
 .user-button {
   gap: 8px;
   border: 1px solid rgba(21, 138, 138, 0.22);
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(10px);
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
@@ -316,8 +292,22 @@ a {
   min-width: 0;
 }
 
+.title-block h2 {
+  color: var(--color-ink-strong);
+  font-size: 29px;
+  font-weight: 820;
+  line-height: 1.08;
+  letter-spacing: 0;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.54);
+}
+
 .title-block p {
   flex-basis: 100%;
+  margin-top: 7px;
+  color: #416b7e;
+  font-size: 15px;
+  font-weight: 520;
+  line-height: 1.45;
 }
 
 .mobile-menu-button {
@@ -1509,10 +1499,6 @@ a {
     margin: 0 -14px;
     padding: 18px 14px 22px;
     background-position: center top;
-  }
-
-  .dashboard-route .title-block h2 {
-    font-size: 24px;
   }
 
   .dashboard-heading h3 {
