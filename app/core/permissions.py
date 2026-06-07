@@ -29,6 +29,7 @@ ROLE_MODULES: dict[str, list[str]] = {
         "overview",
         "students",
         "classes",
+        "teachers",
         "scores",
         "employment",
         "statistics",

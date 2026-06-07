@@ -1,6 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
+from app.core.permissions import get_modules_for_role, get_permissions_for_role
 from app.controllers import auth as auth_api
 
 
@@ -33,3 +34,8 @@ def test_require_permissions_rejects_role_without_permission():
 
     assert response.status_code == 403
     assert response.json()["detail"] == "permission denied"
+
+
+def test_teacher_teacher_module_matches_read_permission():
+    assert "teachers:read" in get_permissions_for_role("teacher")
+    assert "teachers" in get_modules_for_role("teacher")
