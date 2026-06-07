@@ -85,6 +85,17 @@ Useful environment variables:
 
 The request logging middleware records method, path, filtered query string, status code, duration, and client IP. Sensitive query keys such as `password`, `token`, `authorization`, `secret`, and `api_key` are masked.
 
+## Authentication
+
+The backend uses JWT access tokens plus database-backed refresh tokens.
+
+- `POST /auth/login` returns `access_token`, `refresh_token`, `token_type`, and user information.
+- `POST /auth/refresh` rotates the refresh token and returns a new token pair.
+- `POST /auth/logout` revokes the submitted refresh token.
+- `POST /auth/change-password` changes the current user's password and revokes existing refresh tokens for that user.
+
+Refresh tokens are stored only as hashes in `user_refresh_tokens`. Access tokens are verified from the `Authorization: Bearer <token>` header.
+
 ## Role Permissions
 
 The backend uses role-based access plus service-layer data scope filtering.
