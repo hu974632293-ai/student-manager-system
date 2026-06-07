@@ -45,7 +45,7 @@ function closeMobileMenu() {
 </script>
 
 <template>
-  <el-container class="shell">
+  <el-container class="shell" :class="{ 'dashboard-route': route.name === 'dashboard' }">
     <el-aside class="sidebar" width="252px">
       <div class="brand">
         <div class="brand-mark">管</div>

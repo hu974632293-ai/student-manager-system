@@ -135,19 +135,21 @@ onUnmounted(() => {
 
 <template>
   <section class="dashboard" v-loading="loading">
-    <div class="section-heading">
-      <div>
-        <h3>运营总览</h3>
-        <p>基于当前账号可访问数据生成，统计结果来自后端实时接口。</p>
+    <div class="dashboard-hero-surface">
+      <div class="section-heading dashboard-heading">
+        <div>
+          <h3>运营总览</h3>
+          <p>基于当前账号可访问数据生成，统计结果来自后端实时接口。</p>
+        </div>
+        <el-button :loading="loading" @click="load">刷新</el-button>
       </div>
-      <el-button :loading="loading" @click="load">刷新</el-button>
-    </div>
 
-    <div class="metric-grid dense">
-      <RouterLink v-for="item in metrics.filter((metric) => canOpen(metric.key))" :key="item.label" class="metric-card" :to="item.route">
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-      </RouterLink>
+      <div class="metric-grid dense dashboard-metrics">
+        <RouterLink v-for="item in metrics.filter((metric) => canOpen(metric.key))" :key="item.label" class="metric-card" :to="item.route">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+        </RouterLink>
+      </div>
     </div>
 
     <div class="bi-grid">
