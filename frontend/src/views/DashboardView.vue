@@ -136,12 +136,20 @@ onUnmounted(() => {
 <template>
   <section class="dashboard" v-loading="loading">
     <div class="dashboard-hero-surface">
-      <div class="section-heading dashboard-heading">
-        <div>
+      <div class="context-strip dashboard-context">
+        <div class="context-strip-main">
+          <span class="context-kicker">关键指标</span>
           <h3>运营总览</h3>
           <p>基于当前账号可访问数据生成，统计结果来自后端实时接口。</p>
         </div>
-        <el-button :loading="loading" @click="load">刷新</el-button>
+        <div class="context-strip-side">
+          <div class="context-strip-meta">
+            <span>实时接口</span>
+            <span>权限范围</span>
+            <span>角色视图</span>
+          </div>
+          <el-button :loading="loading" @click="load">刷新</el-button>
+        </div>
       </div>
 
       <div class="metric-grid dense dashboard-metrics">

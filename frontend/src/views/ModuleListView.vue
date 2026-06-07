@@ -651,12 +651,13 @@ watch(
 
 <template>
   <section class="page-surface module-page">
-    <div class="section-heading">
-      <div>
+    <div class="context-strip module-context">
+      <div class="context-strip-main">
+        <span class="context-kicker">业务模块</span>
         <h3>{{ config?.title }}</h3>
         <p>{{ config?.description }}</p>
       </div>
-      <div class="toolbar-actions">
+      <div class="context-strip-side toolbar-actions">
         <el-input v-model="searchKeyword" clearable placeholder="筛选当前页数据" style="width: 220px" />
         <el-button :loading="loading" @click="load">刷新</el-button>
         <el-button v-if="canBulkCreateScores" @click="openBulkScores">批量新增</el-button>
@@ -692,27 +693,29 @@ watch(
       </el-form>
     </div>
 
-    <el-table class="business-table" :data="filteredRows" border stripe v-loading="loading" height="560" empty-text="暂无数据">
-      <el-table-column
-        v-for="column in config?.columns"
-        :key="column.key"
-        :prop="column.key"
-        :label="column.label"
-        min-width="130"
-        show-overflow-tooltip
-      />
-      <el-table-column label="操作" width="260" fixed="right">
-        <template #default="{ row }">
-          <div class="row-actions">
-            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button link type="primary" @click="copyDetail(row)">复制详情</el-button>
-            <el-button v-if="canGenerateComment" link type="primary" @click="openComment(row)">生成评语</el-button>
-            <el-button v-if="canWrite && config?.update" link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button v-if="canWrite && config?.remove" link type="danger" @click="remove(row)">删除</el-button>
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="table-shell">
+      <el-table class="business-table" :data="filteredRows" border stripe v-loading="loading" height="560" empty-text="暂无数据">
+        <el-table-column
+          v-for="column in config?.columns"
+          :key="column.key"
+          :prop="column.key"
+          :label="column.label"
+          min-width="130"
+          show-overflow-tooltip
+        />
+        <el-table-column label="操作" width="260" fixed="right">
+          <template #default="{ row }">
+            <div class="row-actions">
+              <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+              <el-button link type="primary" @click="copyDetail(row)">复制详情</el-button>
+              <el-button v-if="canGenerateComment" link type="primary" @click="openComment(row)">生成评语</el-button>
+              <el-button v-if="canWrite && config?.update" link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-if="canWrite && config?.remove" link type="danger" @click="remove(row)">删除</el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
 
     <div class="table-footer">
       <span>共 {{ total }} 条</span>
