@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as Icons from "@element-plus/icons-vue";
-import { User } from "@element-plus/icons-vue";
-import { computed } from "vue";
+import { Menu, User } from "@element-plus/icons-vue";
+import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { findModule, groupLabels, roleLabels, roleModules } from "@/permissions";
@@ -11,10 +11,12 @@ import type { MenuModule } from "@/types";
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+const mobileMenuVisible = ref(false);
 
 const menus = computed(() => roleModules(auth.role, auth.modules));
 const activePath = computed(() => route.path);
 const current = computed(() => findModule(route.meta.module as string) || menus.value[0]);
+const roleName = computed(() => (auth.role ? roleLabels[auth.role] : "用户"));
 const topMenus = computed(() => menus.value.filter((item) => !item.group));
 const groupedMenus = computed(() => {
   const groups: Record<string, MenuModule[]> = {};
@@ -35,6 +37,10 @@ function icon(name: string) {
 function logout() {
   auth.logout();
   router.push("/login");
+}
+
+function closeMobileMenu() {
+  mobileMenuVisible.value = false;
 }
 </script>
 
@@ -72,15 +78,17 @@ function logout() {
     <el-container>
       <el-header class="topbar">
         <div class="title-block">
+          <button class="mobile-menu-button" type="button" aria-label="打开菜单" @click="mobileMenuVisible = true">
+            <el-icon><Menu /></el-icon>
+          </button>
           <h2>{{ current?.title || "工作台" }}</h2>
           <p>{{ current?.subtitle || "学生管理系统" }}</p>
         </div>
         <div class="topbar-actions">
-          <el-tag effect="dark" type="success">{{ auth.role ? roleLabels[auth.role] : "用户" }}</el-tag>
           <el-dropdown>
             <button class="user-button" type="button">
               <el-icon><User /></el-icon>
-              <span>{{ auth.user?.real_name || auth.user?.username }}</span>
+              <span>{{ roleName }} · {{ auth.user?.real_name || auth.user?.username }}</span>
             </button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -94,5 +102,25 @@ function logout() {
         <RouterView />
       </el-main>
     </el-container>
+
+    <el-drawer v-model="mobileMenuVisible" title="系统菜单" direction="ltr" size="286px" class="mobile-menu-drawer">
+      <el-menu :default-active="activePath" router class="mobile-menu" @select="closeMobileMenu">
+        <el-menu-item v-for="item in topMenus" :key="item.key" :index="item.route">
+          <el-icon><component :is="icon(item.icon)" /></el-icon>
+          <span>{{ item.title }}</span>
+        </el-menu-item>
+
+        <el-sub-menu v-for="(items, group) in groupedMenus" :key="group" :index="String(group)">
+          <template #title>
+            <el-icon><component :is="icon(group === 'business' ? 'School' : 'Tools')" /></el-icon>
+            <span>{{ groupLabels[group as keyof typeof groupLabels] }}</span>
+          </template>
+          <el-menu-item v-for="item in items" :key="item.key" :index="item.route">
+            <el-icon><component :is="icon(item.icon)" /></el-icon>
+            <span>{{ item.title }}</span>
+          </el-menu-item>
+        </el-sub-menu>
+      </el-menu>
+    </el-drawer>
   </el-container>
 </template>

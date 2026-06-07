@@ -33,6 +33,24 @@ FRONTEND_ROOT = Path("frontend")
 FRONTEND_DIST = FRONTEND_ROOT / "dist"
 FRONTEND_STATIC_DIR = FRONTEND_DIST if FRONTEND_DIST.exists() else FRONTEND_ROOT
 FRONTEND_INDEX = FRONTEND_STATIC_DIR / "index.html"
+FRONTEND_ROUTES = {
+    "login",
+    "profile",
+    "students",
+    "classes",
+    "teachers",
+    "scores",
+    "employment",
+    "statistics",
+    "letters",
+    "weather",
+    "geocode",
+    "logs",
+    "ai-chat",
+    "data-query",
+    "permissions",
+    "forbidden",
+}
 
 VALIDATION_MESSAGE_MAP = {
     "missing": "为必填项",
@@ -99,6 +117,16 @@ def _format_validation_errors(errors: list[dict]) -> list[dict]:
 
 app = FastAPI(title="学生管理系统", description="FastAPI + Vue3 学生管理后台")
 app.add_middleware(RequestLoggingMiddleware)
+
+
+@app.middleware("http")
+async def frontend_route_fallback_middleware(request: Request, call_next):
+    """浏览器直接刷新前端路由时返回 Vue 入口，API 请求仍按原路径处理。"""
+    route = request.url.path.lstrip("/")
+    accept = request.headers.get("accept", "")
+    if request.method == "GET" and route in FRONTEND_ROUTES and "text/html" in accept:
+        return FileResponse(FRONTEND_INDEX)
+    return await call_next(request)
 
 app.include_router(ai_chat_router)
 app.include_router(letter_router)
@@ -169,24 +197,6 @@ async def dashboard_page():
 
 @app.get("/{frontend_path:path}", summary="打开前端路由页面")
 async def frontend_page(frontend_path: str):
-    frontend_routes = {
-        "login",
-        "profile",
-        "students",
-        "classes",
-        "teachers",
-        "scores",
-        "employment",
-        "statistics",
-        "letters",
-        "weather",
-        "geocode",
-        "logs",
-        "ai-chat",
-        "data-query",
-        "permissions",
-        "forbidden",
-    }
-    if frontend_path in frontend_routes:
+    if frontend_path in FRONTEND_ROUTES:
         return FileResponse(FRONTEND_INDEX)
     raise HTTPException(status_code=404, detail="not found")

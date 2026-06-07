@@ -667,10 +667,11 @@ watch(
       <el-form label-position="top">
         <div class="filter-grid">
           <el-form-item v-for="field in filterFields" :key="field.key" :label="field.label">
-            <el-input-number
+            <el-input
               v-if="field.type === 'number'"
               v-model="filterForm[field.key]"
-              controls-position="right"
+              type="number"
+              clearable
               class="full-input"
             />
             <el-input v-else v-model="filterForm[field.key]" clearable />
