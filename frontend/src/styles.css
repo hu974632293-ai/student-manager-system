@@ -14,6 +14,7 @@
   --shadow-soft: 0 16px 40px rgba(18, 48, 71, 0.08);
   --shadow-hover: 0 18px 42px rgba(18, 48, 71, 0.12);
   --font-display:
+    "YouSheBiaoTiHei", "优设标题黑", "Alimama ShuHeiTi", "阿里妈妈数黑体",
     "Alibaba PuHuiTi 3.0", "Alibaba PuHuiTi", "HarmonyOS Sans SC", "MiSans",
     "Source Han Sans SC", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei UI",
     "Microsoft YaHei", sans-serif;
@@ -304,9 +305,24 @@ a {
 }
 
 .title-block {
+  position: relative;
   min-width: 0;
-  gap: 12px;
+  gap: 12px 14px;
   flex-wrap: wrap;
+  padding-left: 18px;
+}
+
+.title-block::before {
+  content: "";
+  width: 4px;
+  height: 42px;
+  align-self: center;
+  margin-left: -18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--color-primary), #8adfd9);
+  box-shadow:
+    0 0 0 4px rgba(21, 138, 138, 0.08),
+    0 10px 22px rgba(21, 138, 138, 0.22);
 }
 
 .title-block h2,
@@ -315,18 +331,23 @@ a {
 }
 
 .title-block h2 {
-  color: var(--color-ink-strong);
+  color: transparent;
   font-family: var(--font-display);
-  font-size: 29px;
-  font-weight: 820;
+  font-size: 31px;
+  font-weight: 900;
   line-height: 1.08;
   letter-spacing: 0;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.54);
+  background: linear-gradient(180deg, #123047 0%, #082134 58%, #0f666b 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.35px rgba(10, 31, 48, 0.16);
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.72)) drop-shadow(0 9px 18px rgba(18, 48, 71, 0.12));
 }
 
 .title-block p {
   flex-basis: 100%;
-  margin-top: 7px;
+  margin-top: 4px;
   color: #416b7e;
   font-size: 15px;
   font-weight: 520;
