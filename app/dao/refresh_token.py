@@ -17,6 +17,23 @@ class RefreshTokenDAO:
         token.replaced_by_jti = replaced_by_jti
         return token
 
+    def consume_active(self, db: Session, token_hash: str, now, replaced_by_jti: str) -> int:
+        return (
+            db.query(UserRefreshToken)
+            .filter(
+                UserRefreshToken.token_hash == token_hash,
+                UserRefreshToken.revoked_at.is_(None),
+                UserRefreshToken.expires_at > now,
+            )
+            .update(
+                {
+                    "revoked_at": now,
+                    "replaced_by_jti": replaced_by_jti,
+                },
+                synchronize_session=False,
+            )
+        )
+
     def revoke_all_for_user(self, db: Session, user_id: int, revoked_at):
         count = (
             db.query(UserRefreshToken)

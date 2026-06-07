@@ -56,7 +56,10 @@ class TokenService:
             created_user_agent=token.created_user_agent,
         )
         try:
-            refresh_token_dao.revoke(db, token, now, replaced_by_jti=new_data["jti"])
+            updated_count = refresh_token_dao.consume_active(db, token_hash, now, replaced_by_jti=new_data["jti"])
+            if updated_count != 1:
+                db.rollback()
+                return None
             new_token = refresh_token_dao.create(db, new_data)
             db.commit()
             db.refresh(new_token)

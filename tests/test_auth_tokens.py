@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core import security
+from app.dao.refresh_token import refresh_token_dao
 from app.models.refresh_token import UserRefreshToken
 from app.models.user import User
 from app.services.auth_service import AuthService
@@ -102,6 +103,22 @@ def test_refresh_token_rotation_revokes_old_token():
     assert rotated_user.id == user.id
     assert new_plain != old_plain
     assert TokenService.rotate_refresh_token(db, old_plain) is None
+
+
+def test_refresh_token_rotation_does_not_create_new_token_when_atomic_consume_fails(monkeypatch):
+    db = make_db()
+    user = add_user(db)
+    old_plain = TokenService.issue_refresh_token(db, user)
+
+    monkeypatch.setattr(refresh_token_dao, "consume_active", lambda *args, **kwargs: 0, raising=False)
+
+    rotated = TokenService.rotate_refresh_token(db, old_plain)
+    tokens = db.query(UserRefreshToken).filter(UserRefreshToken.user_id == user.id).all()
+
+    assert rotated is None
+    assert len(tokens) == 1
+    assert tokens[0].token_hash == security.hash_refresh_token(old_plain)
+    assert tokens[0].revoked_at is None
 
 
 def test_login_returns_access_and_refresh_tokens():
