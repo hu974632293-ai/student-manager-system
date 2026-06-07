@@ -166,6 +166,16 @@ onMounted(loadMemories);
     </aside>
 
     <main class="chat-panel">
+      <div class="chat-toolbar">
+        <div>
+          <strong>普通问答</strong>
+          <span>{{ sessionId || "新会话" }}</span>
+        </div>
+        <div class="workbench-metrics">
+          <span>{{ messages.length }} 条消息</span>
+          <span>{{ memories.length }} 条记忆</span>
+        </div>
+      </div>
       <div class="chat-list">
         <div v-if="!messages.length" class="empty-state compact">开始一次普通问答</div>
         <article v-for="(item, index) in messages" :key="index" :class="['chat-message', item.role]">
@@ -182,6 +192,10 @@ onMounted(loadMemories);
     <aside class="workbench-side memory-side" v-loading="memoryLoading">
       <h3>长期记忆</h3>
       <p>支持手动添加、删除和语义搜索当前用户记忆。</p>
+      <div class="side-stat">
+        <strong>{{ memories.length }}</strong>
+        <span>当前可用记忆</span>
+      </div>
       <el-input v-model="newMemory" type="textarea" :rows="3" placeholder="例如：记住我的专业是软件工程" />
       <el-button type="primary" class="full-button" @click="addMemory">添加记忆</el-button>
       <el-input v-model="searchQuery" placeholder="搜索记忆" @keyup.enter="searchMemories" />

@@ -394,6 +394,7 @@ const config = computed(() => configs[moduleKey.value]);
 const canWrite = computed(() => Boolean(config.value?.writePermission && auth.permissions.includes(config.value.writePermission)));
 const canGenerateComment = computed(() => moduleKey.value === "students" && ["admin", "teacher", "consultant"].includes(String(auth.role || "")));
 const canBulkCreateScores = computed(() => moduleKey.value === "scores" && canWrite.value);
+const moduleState = computed(() => (canWrite.value ? "可维护" : "只读"));
 const filteredRows = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase();
   if (!keyword) return rows.value;
@@ -649,7 +650,7 @@ watch(
 </script>
 
 <template>
-  <section class="page-surface">
+  <section class="page-surface module-page">
     <div class="section-heading">
       <div>
         <h3>{{ config?.title }}</h3>
@@ -661,6 +662,13 @@ watch(
         <el-button v-if="canBulkCreateScores" @click="openBulkScores">批量新增</el-button>
         <el-button v-if="canWrite && config?.create" type="primary" @click="openCreate">新增</el-button>
       </div>
+    </div>
+
+    <div class="module-status-strip">
+      <span>当前页 {{ filteredRows.length }} 条</span>
+      <span>总计 {{ total }} 条</span>
+      <span>第 {{ page }} 页</span>
+      <span :class="['mode-chip', canWrite ? 'writable' : 'readonly']">{{ moduleState }}</span>
     </div>
 
     <div v-if="filterFields.length" class="filter-bar">
@@ -684,7 +692,7 @@ watch(
       </el-form>
     </div>
 
-    <el-table :data="filteredRows" border stripe v-loading="loading" height="560" empty-text="暂无数据">
+    <el-table class="business-table" :data="filteredRows" border stripe v-loading="loading" height="560" empty-text="暂无数据">
       <el-table-column
         v-for="column in config?.columns"
         :key="column.key"
@@ -695,11 +703,13 @@ watch(
       />
       <el-table-column label="操作" width="260" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-          <el-button link type="primary" @click="copyDetail(row)">复制详情</el-button>
-          <el-button v-if="canGenerateComment" link type="primary" @click="openComment(row)">生成评语</el-button>
-          <el-button v-if="canWrite && config?.update" link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button v-if="canWrite && config?.remove" link type="danger" @click="remove(row)">删除</el-button>
+          <div class="row-actions">
+            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+            <el-button link type="primary" @click="copyDetail(row)">复制详情</el-button>
+            <el-button v-if="canGenerateComment" link type="primary" @click="openComment(row)">生成评语</el-button>
+            <el-button v-if="canWrite && config?.update" link type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button v-if="canWrite && config?.remove" link type="danger" @click="remove(row)">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -718,8 +728,12 @@ watch(
       />
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="editingRow ? '编辑记录' : '新增记录'" width="640px">
-      <el-form label-position="top">
+    <el-drawer v-model="dialogVisible" :title="editingRow ? '编辑记录' : '新增记录'" size="560px" class="record-drawer" destroy-on-close>
+      <div class="drawer-copy">
+        <strong>{{ config?.title }}</strong>
+        <span>{{ editingRow ? "修改后将按后端权限范围保存" : "新增记录会进入当前业务模块" }}</span>
+      </div>
+      <el-form label-position="top" class="drawer-form">
         <el-form-item v-for="field in visibleFields" :key="field.key" :label="field.label">
           <el-input-number
             v-if="field.type === 'number'"
@@ -751,17 +765,20 @@ watch(
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="save">保存</el-button>
+        <div class="drawer-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="saving" @click="save">保存</el-button>
+        </div>
       </template>
-    </el-dialog>
+    </el-drawer>
 
-    <el-drawer v-model="detailVisible" title="记录详情" size="520px">
-      <el-descriptions v-if="detailRow" :column="1" border>
-        <el-descriptions-item v-for="item in detailItems" :key="item.key" :label="item.label">
-          {{ item.value }}
-        </el-descriptions-item>
-      </el-descriptions>
+    <el-drawer v-model="detailVisible" title="记录详情" size="520px" class="record-drawer" destroy-on-close>
+      <div v-if="detailRow" class="detail-grid">
+        <div v-for="item in detailItems" :key="item.key" class="detail-item">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+        </div>
+      </div>
     </el-drawer>
 
     <el-dialog v-model="commentVisible" title="生成学生评语" width="680px">

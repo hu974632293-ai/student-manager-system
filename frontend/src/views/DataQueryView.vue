@@ -76,6 +76,13 @@ async function submit() {
 
     <main class="data-query-main">
       <section class="query-composer">
+        <div class="composer-head">
+          <div>
+            <h3>自然语言查询</h3>
+            <p>输入业务问题后返回摘要、SQL 和结果表格。</p>
+          </div>
+          <span>{{ result ? `已返回 ${result.row_count} 条` : "等待查询" }}</span>
+        </div>
         <el-input
           v-model="question"
           type="textarea"
@@ -128,6 +135,10 @@ async function submit() {
       <h3>安全边界</h3>
       <p>当前仅支持学生、班级、教师、成绩和就业相关白名单表，只执行 SELECT 查询。</p>
       <p>教师账号会按授课班级限制可查询学生范围。</p>
+      <div class="side-stat">
+        <strong>SELECT</strong>
+        <span>只读查询模式</span>
+      </div>
     </aside>
   </section>
 </template>
