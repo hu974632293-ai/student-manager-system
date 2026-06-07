@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.controllers.auth import require_roles
 from app.services.ai_chat_service import AiChatService
-from app.views.schemas.ai_chat import AiChatMemoryCreateRequest, AiChatRequest
+from app.views.schemas.ai_chat import (
+    AiChatMemoryCreateRequest,
+    AiChatRequest,
+    AiChatSessionCreateRequest,
+    AiChatSessionUpdateRequest,
+)
 
 
 ai_chat_router = APIRouter(prefix="/ai", tags=["ai"])
@@ -46,13 +51,60 @@ def delete_memory(
     return AiChatService.delete_memory(db, memory_id, current_user)
 
 
+@ai_chat_router.get("/sessions", summary="查询 AI 会话列表")
+def list_sessions(
+    keyword: str | None = Query(None, max_length=100),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
+):
+    return AiChatService.list_sessions(db, current_user, keyword=keyword, limit=limit)
+
+
+@ai_chat_router.post("/sessions", summary="创建 AI 会话")
+def create_session(
+    payload: AiChatSessionCreateRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
+):
+    return AiChatService.create_session(db, payload, current_user)
+
+
+@ai_chat_router.get("/sessions/{session_id}/messages", summary="查询 AI 会话消息")
+def get_session_messages(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
+):
+    return AiChatService.get_session_messages(db, session_id, current_user)
+
+
+@ai_chat_router.put("/sessions/{session_id}", summary="重命名 AI 会话")
+def update_session(
+    session_id: str,
+    payload: AiChatSessionUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
+):
+    return AiChatService.update_session(db, session_id, payload, current_user)
+
+
+@ai_chat_router.delete("/sessions/{session_id}", summary="删除 AI 会话")
+def delete_session(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
+):
+    return AiChatService.delete_session(db, session_id, current_user)
+
+
 @ai_chat_router.get("/sessions/{session_id}/summary", summary="获取 AI 会话摘要")
 def get_session_summary(
     session_id: str,
     db: Session = Depends(get_db),
     current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
 ):
-    return AiChatService.get_session_summary(db, session_id)
+    return AiChatService.get_session_summary(db, session_id, current_user)
 
 
 @ai_chat_router.post("/sessions/{session_id}/summarize", summary="重新生成会话摘要")
@@ -61,7 +113,7 @@ def regenerate_summary(
     db: Session = Depends(get_db),
     current_user=Depends(require_roles("admin", "teacher", "student", "consultant")),
 ):
-    return AiChatService.regenerate_summary(db, session_id)
+    return AiChatService.regenerate_summary(db, session_id, current_user)
 
 
 @ai_chat_router.get("/memories/search", summary="语义搜索长期记忆")

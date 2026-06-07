@@ -1,6 +1,6 @@
 import json
 
-from sqlalchemy import func
+from sqlalchemy import or_, func
 from sqlalchemy.orm import Session
 
 from app.models.ai_chat import AiChatMemory, AiChatMessage, AiChatMessageVector, AiChatSession
@@ -10,12 +10,52 @@ class AiChatDao:
     def get_session(self, db: Session, session_id: str):
         return db.query(AiChatSession).filter(AiChatSession.session_id == session_id).first()
 
-    def create_session(self, db: Session, session_id: str, title: str = None):
-        session = AiChatSession(session_id=session_id, title=title)
+    def create_session(self, db: Session, session_id: str, title: str = None, user_id: int = None):
+        session = AiChatSession(session_id=session_id, title=title, user_id=user_id)
         db.add(session)
         db.commit()
         db.refresh(session)
         return session
+
+    def list_user_sessions(self, db: Session, user_id: int, keyword: str = None, limit: int = 50):
+        query = db.query(AiChatSession).filter(AiChatSession.user_id == user_id)
+        if keyword:
+            like = f"%{keyword}%"
+            query = query.filter(or_(AiChatSession.title.like(like), AiChatSession.session_id.like(like)))
+        return (
+            query.order_by(AiChatSession.updated_at.desc(), AiChatSession.id.desc())
+            .limit(limit)
+            .all()
+        )
+
+    def update_session_title(self, db: Session, session_id: str, user_id: int, title: str):
+        session = (
+            db.query(AiChatSession)
+            .filter(AiChatSession.session_id == session_id, AiChatSession.user_id == user_id)
+            .first()
+        )
+        if not session:
+            return None
+        session.title = title
+        session.updated_at = func.now()
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        return session
+
+    def delete_session(self, db: Session, session_id: str, user_id: int) -> bool:
+        session = (
+            db.query(AiChatSession)
+            .filter(AiChatSession.session_id == session_id, AiChatSession.user_id == user_id)
+            .first()
+        )
+        if not session:
+            return False
+        db.query(AiChatMessageVector).filter(AiChatMessageVector.session_id == session_id).delete()
+        db.query(AiChatMessage).filter(AiChatMessage.session_id == session_id).delete()
+        db.delete(session)
+        db.commit()
+        return True
 
     def touch_session(self, db: Session, session_id: str):
         session = self.get_session(db, session_id)

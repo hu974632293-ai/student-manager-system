@@ -91,9 +91,9 @@ class AiChatService:
 
             # 首次创建 session 时绑定 user_id
             if not session:
-                ai_chat_dao.create_session(db, session_id, title)
-                if user_id:
-                    ai_chat_dao.set_session_user(db, session_id, user_id)
+                ai_chat_dao.create_session(db, session_id, title, user_id=user_id)
+            elif user_id and session.user_id and session.user_id != user_id:
+                return fail("permission denied")
             elif user_id and not session.user_id:
                 ai_chat_dao.set_session_user(db, session_id, user_id)
 
@@ -345,13 +345,111 @@ class AiChatService:
             return fail("memory not found")
         return success(None, "memory deleted")
 
+    @staticmethod
+    def _can_access_session(session, current_user) -> bool:
+        if not session:
+            return False
+        if current_user is None:
+            return True
+        return session.user_id in (None, current_user.id)
+
+    @staticmethod
+    def _claim_session_if_needed(db: Session, session, current_user):
+        if session and current_user is not None and session.user_id is None:
+            return ai_chat_dao.set_session_user(db, session.session_id, current_user.id)
+        return session
+
+    @staticmethod
+    def _format_datetime(value) -> str | None:
+        return value.isoformat() if value else None
+
+    @staticmethod
+    def _session_to_dict(session) -> dict:
+        messages = list(session.messages or [])
+        last_message = messages[-1].content if messages else ""
+        return {
+            "id": session.id,
+            "session_id": session.session_id,
+            "title": session.title or last_message[:30] or "新对话",
+            "summary": session.summary,
+            "summary_updated_at": AiChatService._format_datetime(session.summary_updated_at),
+            "created_at": AiChatService._format_datetime(session.created_at),
+            "updated_at": AiChatService._format_datetime(session.updated_at),
+            "message_count": len(messages),
+            "last_message": last_message[:120],
+        }
+
+    @staticmethod
+    def _message_to_dict(message) -> dict:
+        return {
+            "id": message.id,
+            "session_id": message.session_id,
+            "role": message.role,
+            "content": message.content,
+            "created_at": AiChatService._format_datetime(message.created_at),
+        }
+
+    @staticmethod
+    def create_session(db: Session, payload, current_user):
+        title = (payload.title or "").strip() or "新对话"
+        session_id = uuid.uuid4().hex
+        session = ai_chat_dao.create_session(db, session_id, title[:100], user_id=current_user.id)
+        return success(AiChatService._session_to_dict(session), "session created")
+
+    @staticmethod
+    def list_sessions(db: Session, current_user, keyword: str = None, limit: int = 50):
+        safe_limit = min(max(int(limit), 1), 100)
+        safe_keyword = keyword.strip() if keyword else None
+        sessions = ai_chat_dao.list_user_sessions(db, current_user.id, safe_keyword, safe_limit)
+        return success(
+            {
+                "total": len(sessions),
+                "items": [AiChatService._session_to_dict(session) for session in sessions],
+            },
+            "sessions found",
+        )
+
+    @staticmethod
+    def update_session(db: Session, session_id: str, payload, current_user):
+        title = payload.title.strip()
+        if not title:
+            return fail("title is required")
+        session = ai_chat_dao.update_session_title(db, session_id, current_user.id, title[:100])
+        if not session:
+            return fail("session not found")
+        return success(AiChatService._session_to_dict(session), "session updated")
+
+    @staticmethod
+    def delete_session(db: Session, session_id: str, current_user):
+        if not ai_chat_dao.delete_session(db, session_id, current_user.id):
+            return fail("session not found")
+        return success(None, "session deleted")
+
+    @staticmethod
+    def get_session_messages(db: Session, session_id: str, current_user):
+        session = ai_chat_dao.get_session(db, session_id)
+        if not AiChatService._can_access_session(session, current_user):
+            return fail("permission denied")
+        session = AiChatService._claim_session_if_needed(db, session, current_user)
+        messages = ai_chat_dao.list_all_session_messages(db, session_id)
+        return success(
+            {
+                "session": AiChatService._session_to_dict(session),
+                "items": [AiChatService._message_to_dict(message) for message in messages],
+            },
+            "messages found",
+        )
+
     # ═══════════════════════════════════════════
     #  新增 API：会话摘要
     # ═══════════════════════════════════════════
 
     @staticmethod
-    def get_session_summary(db: Session, session_id: str):
+    def get_session_summary(db: Session, session_id: str, current_user=None):
         session = ai_chat_dao.get_session(db, session_id)
+        if not AiChatService._can_access_session(session, current_user):
+            return fail("permission denied")
+        session = AiChatService._claim_session_if_needed(db, session, current_user)
         if not session:
             return fail("session not found")
         return success({
@@ -363,9 +461,12 @@ class AiChatService:
         })
 
     @staticmethod
-    def regenerate_summary(db: Session, session_id: str):
+    def regenerate_summary(db: Session, session_id: str, current_user=None):
         """一次性全量扫描会话消息，重新生成摘要。"""
         session = ai_chat_dao.get_session(db, session_id)
+        if not AiChatService._can_access_session(session, current_user):
+            return fail("permission denied")
+        session = AiChatService._claim_session_if_needed(db, session, current_user)
         if not session:
             return fail("session not found")
 

@@ -12,6 +12,14 @@ class AiChatMemoryCreateRequest(BaseModel):
     content: str = Field(min_length=1, max_length=1000)
 
 
+class AiChatSessionCreateRequest(BaseModel):
+    title: Optional[str] = Field(default=None, max_length=100)
+
+
+class AiChatSessionUpdateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+
+
 class AiChatMessageOut(BaseModel):
     id: int
     session_id: str

@@ -129,7 +129,7 @@ def test_ai_chat_service_returns_unified_failure(monkeypatch):
         def get_session(self, db, session_id):
             return None
 
-        def create_session(self, db, session_id, title):
+        def create_session(self, db, session_id, title, user_id=None):
             return object()
 
         def get_session_summary(self, db, session_id):

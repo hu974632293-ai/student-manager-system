@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+from types import SimpleNamespace
 
 from app.core.token_estimator import TokenEstimator
 from app.services.ai_chat_service import AiChatService
@@ -126,3 +127,51 @@ class TestAiChatService:
 
     def test_count_retrieval_context_empty(self):
         assert AiChatService._count_retrieval_context("") == 0
+
+    def test_list_sessions_returns_current_user_sessions(self, monkeypatch):
+        class FakeDao:
+            def list_user_sessions(self, db, user_id, keyword=None, limit=50):
+                assert user_id == 7
+                assert keyword == "project"
+                assert limit == 20
+                return [
+                    SimpleNamespace(
+                        id=1,
+                        session_id="s1",
+                        title="project lifecycle",
+                        summary="summary",
+                        summary_updated_at=None,
+                        created_at=None,
+                        updated_at=None,
+                        messages=[
+                            SimpleNamespace(role="user", content="hello"),
+                            SimpleNamespace(role="assistant", content="world"),
+                        ],
+                    )
+                ]
+
+        from app.services import ai_chat_service
+
+        monkeypatch.setattr(ai_chat_service, "ai_chat_dao", FakeDao())
+
+        result = AiChatService.list_sessions(object(), SimpleNamespace(id=7), keyword="project", limit=20)
+
+        assert result["code"] == 1
+        assert result["data"]["total"] == 1
+        assert result["data"]["items"][0]["session_id"] == "s1"
+        assert result["data"]["items"][0]["message_count"] == 2
+        assert result["data"]["items"][0]["last_message"] == "world"
+
+    def test_get_session_messages_rejects_other_user_session(self, monkeypatch):
+        class FakeDao:
+            def get_session(self, db, session_id):
+                return SimpleNamespace(session_id=session_id, user_id=8)
+
+        from app.services import ai_chat_service
+
+        monkeypatch.setattr(ai_chat_service, "ai_chat_dao", FakeDao())
+
+        result = AiChatService.get_session_messages(object(), "s1", SimpleNamespace(id=7))
+
+        assert result["code"] == 0
+        assert result["msg"] == "当前角色无权执行该操作"

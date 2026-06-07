@@ -64,7 +64,14 @@ MESSAGE_MAP = {
     "memory created": "记忆创建成功",
     "memory deleted": "记忆删除成功",
     "memory not found": "记忆不存在",
+    "memories found": "记忆列表获取成功",
+    "session created": "会话创建成功",
+    "sessions found": "会话列表获取成功",
+    "session updated": "会话更新成功",
+    "session deleted": "会话删除成功",
     "session not found": "会话不存在",
+    "messages found": "会话消息获取成功",
+    "title is required": "请填写会话名称",
     "no messages to summarize": "当前会话暂无可摘要的消息",
 }
 

@@ -19,9 +19,11 @@ function assertIncludes(text, message) {
 
 assertIncludes("教务管理", "侧边栏缺少教务管理分组");
 assertIncludes("系统工具", "侧边栏缺少系统工具分组");
-assertIncludes("运营总览", "总览页未改造成 BI 看板文案");
+assertIncludes("运营总览", "总览页未使用中文看板文案");
 assertIncludes("邮件发送", "缺少邮件发送页面文案");
 assertIncludes("天气查询", "缺少天气查询页面文案");
 assertIncludes("经纬度查询", "缺少经纬度查询页面文案");
 assertIncludes("普通问答", "缺少普通问答页面文案");
+assertIncludes("新对话", "缺少 AI 会话创建文案");
+assertIncludes("长期记忆", "缺少 AI 记忆区域文案");
 assertIncludes("智能问数", "缺少智能问数页面文案");
