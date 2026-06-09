@@ -67,6 +67,7 @@
 - 后端会话优先只改 `app/`、`create_table.py`、`scripts/`、`tests/`、后端说明。
 - `README.md`、`.gitignore`、`app/main.py` 等共享文件改动前必须确认是否会影响另一会话。
 - 提交前必须检查 `git status` 和 staged 文件，禁止把另一会话未完成改动混入提交。
+- 开发过程中如果启动了服务并占用端口，任务完成后必须及时释放对应端口，避免影响用户本地正常启动。
 
 ## MVC 分层规则
 
