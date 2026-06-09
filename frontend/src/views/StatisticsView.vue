@@ -127,7 +127,7 @@ onUnmounted(() => {
       <article class="page-surface">
         <div class="card-title">
           <h4>年龄大于 30 岁学生</h4>
-          <span>{{ overAgeRows.length }} 条记录</span>
+          <span class="rule-chip">{{ overAgeRows.length }} 条记录</span>
         </div>
         <el-table :data="overAgeRows" border height="320">
           <el-table-column prop="student_id" label="学号" width="130" />
@@ -140,7 +140,7 @@ onUnmounted(() => {
       <article class="page-surface">
         <div class="card-title">
           <h4>全科优秀成绩明细</h4>
-          <span>默认筛选所有成绩不低于 80 分的学生</span>
+          <span class="rule-chip">成绩 >= 80</span>
         </div>
         <el-table :data="excellentRows" border height="320">
           <el-table-column prop="student_id" label="学号" width="130" />
@@ -155,7 +155,7 @@ onUnmounted(() => {
       <article class="page-surface">
         <div class="card-title">
           <h4>挂科风险</h4>
-          <span>默认低于 60 分且次数超过 2 次</span>
+          <span class="rule-chip">低于 60 且 > 2 次</span>
         </div>
         <el-table :data="failedRows" border height="320">
           <el-table-column prop="name" label="姓名" width="120" />
@@ -182,7 +182,7 @@ onUnmounted(() => {
       <article class="page-surface">
         <div class="card-title">
           <h4>学生就业时长</h4>
-          <span>基于录用日期与开岗日期计算</span>
+          <span class="rule-chip">录用 - 开岗</span>
         </div>
         <el-table :data="studentDurationRows" border height="300">
           <el-table-column prop="student_id" label="学号" width="130" />
@@ -194,7 +194,7 @@ onUnmounted(() => {
       <article class="page-surface">
         <div class="card-title">
           <h4>班级平均就业时长</h4>
-          <span>按班级汇总就业效率</span>
+          <span class="rule-chip">班级汇总</span>
         </div>
         <el-table :data="durationRows" border height="300">
           <el-table-column prop="class_name" label="班级" min-width="160" />

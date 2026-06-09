@@ -66,7 +66,11 @@ async function submit() {
   <section class="data-query-page">
     <aside class="workbench-side">
       <h3>智能问数</h3>
-      <p>输入自然语言问题，系统会转换为只读查询语句，并返回中文摘要和表格结果。</p>
+      <div class="info-rail">
+        <span class="info-chip">自然语言</span>
+        <span class="info-chip">中文摘要</span>
+        <span class="info-chip">结果表格</span>
+      </div>
       <div class="query-examples">
         <button type="button" @click="question = '哪个班级平均成绩最高？'">哪个班级平均成绩最高？</button>
         <button type="button" @click="question = '薪资最高的前 5 名学生是谁？'">薪资最高的前 5 名学生是谁？</button>
@@ -79,7 +83,11 @@ async function submit() {
         <div class="composer-head">
           <div>
             <h3>自然语言查询</h3>
-            <p>输入业务问题后返回摘要、SQL 和结果表格。</p>
+            <div class="info-rail compact">
+              <span class="info-chip">摘要</span>
+              <span class="info-chip">SQL</span>
+              <span class="info-chip">表格</span>
+            </div>
           </div>
           <span>{{ result ? `已返回 ${result.row_count} 条` : "等待查询" }}</span>
         </div>
@@ -126,15 +134,19 @@ async function submit() {
         </div>
       </section>
 
-      <section v-else class="empty-state">
-        输入问题后点击查询，这里会展示查询语句、摘要和结果表格。
+      <section v-else class="empty-state soft">
+        <strong>等待查询</strong>
+        <span>结果会在这里展开</span>
       </section>
     </main>
 
     <aside class="workbench-side">
       <h3>安全边界</h3>
-      <p>当前仅支持学生、班级、教师、成绩和就业相关白名单表，只执行 SELECT 查询。</p>
-      <p>教师账号会按授课班级限制可查询学生范围。</p>
+      <div class="info-rail vertical">
+        <span class="info-chip">白名单表</span>
+        <span class="info-chip">只读 SELECT</span>
+        <span class="info-chip">角色范围</span>
+      </div>
       <div class="side-stat">
         <strong>SELECT</strong>
         <span>只读查询模式</span>

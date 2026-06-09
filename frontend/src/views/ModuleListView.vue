@@ -23,6 +23,7 @@ interface FormField {
 interface ModuleConfig {
   title: string;
   description: string;
+  contextTags?: string[];
   writePermission?: string;
   columns: TableColumn[];
   fields: FormField[];
@@ -141,6 +142,7 @@ const configs: Record<string, ModuleConfig> = {
   students: {
     title: "学生管理",
     description: "学生档案支持分页查询、新增、编辑、删除；数据范围由后端权限控制。",
+    contextTags: ["档案维护", "分页查询", "权限范围"],
     writePermission: "students:write",
     columns: [
       { key: "student_id", label: "学号" },
@@ -193,6 +195,7 @@ const configs: Record<string, ModuleConfig> = {
   classes: {
     title: "班级管理",
     description: "班级信息支持分页查询、新增、编辑、删除；教师只能查看授课班级。",
+    contextTags: ["授课班级", "分页维护", "教师范围"],
     writePermission: "classes:write",
     columns: [
       { key: "id", label: "记录编号" },
@@ -232,6 +235,7 @@ const configs: Record<string, ModuleConfig> = {
   teachers: {
     title: "教师管理",
     description: "教师档案当前由后端返回全量列表，前端按页展示。",
+    contextTags: ["教师档案", "前端分页", "可维护"],
     writePermission: "teachers:write",
     columns: [
       { key: "id", label: "记录编号" },
@@ -275,6 +279,7 @@ const configs: Record<string, ModuleConfig> = {
   scores: {
     title: "成绩管理",
     description: "成绩支持分页查询、新增、编辑、删除；学生账号只能查看本人数据。",
+    contextTags: ["成绩记录", "分页查询", "本人范围"],
     writePermission: "scores:write",
     columns: [
       { key: "student_id", label: "学号" },
@@ -327,6 +332,7 @@ const configs: Record<string, ModuleConfig> = {
   employment: {
     title: "就业管理",
     description: "就业记录支持分页查询、新增、编辑、删除；顾问和教师按后端范围过滤。",
+    contextTags: ["就业记录", "薪资筛选", "范围过滤"],
     writePermission: "employment:write",
     columns: [
       { key: "id", label: "记录编号" },
@@ -375,6 +381,7 @@ const configs: Record<string, ModuleConfig> = {
   statistics: {
     title: "统计结果",
     description: "统计页面当前按后端只读接口展示，不提供 CRUD 操作。",
+    contextTags: ["只读统计", "后端接口", "排行数据"],
     columns: [
       { key: "name", label: "姓名" },
       { key: "class_name", label: "班级" },
@@ -395,6 +402,7 @@ const canWrite = computed(() => Boolean(config.value?.writePermission && auth.pe
 const canGenerateComment = computed(() => moduleKey.value === "students" && ["admin", "teacher", "consultant"].includes(String(auth.role || "")));
 const canBulkCreateScores = computed(() => moduleKey.value === "scores" && canWrite.value);
 const moduleState = computed(() => (canWrite.value ? "可维护" : "只读"));
+const contextTags = computed(() => config.value?.contextTags || []);
 const filteredRows = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase();
   if (!keyword) return rows.value;
@@ -655,7 +663,9 @@ watch(
       <div class="context-strip-main">
         <span class="context-kicker">业务模块</span>
         <h3>{{ config?.title }}</h3>
-        <p>{{ config?.description }}</p>
+        <div class="context-strip-meta">
+          <span v-for="tag in contextTags" :key="tag">{{ tag }}</span>
+        </div>
       </div>
       <div class="context-strip-side toolbar-actions">
         <el-input v-model="searchKeyword" clearable placeholder="筛选当前页数据" style="width: 220px" />
