@@ -24,6 +24,29 @@ def get_allstudents(db: Session, skip: int = 0, limit: int = 10, student_ids=Non
     return query.offset(skip).limit(limit).all(), query.count()
 
 
+def query_students(
+    db: Session,
+    student_id=None,
+    student_name=None,
+    class_id=None,
+    skip: int = 0,
+    limit: int = 10,
+    student_ids=None,
+    class_ids=None,
+    consultant_id=None,
+):
+    query = db.query(Student).filter(Student.is_deleted == False)
+    if student_id not in (None, ""):
+        query = query.filter(Student.student_id == student_id)
+    if student_name not in (None, ""):
+        query = query.filter(Student.name.like(f"%{student_name}%"))
+    if class_id not in (None, ""):
+        query = query.filter(Student.class_id == class_id)
+    query = _apply_student_scope(query, student_ids=student_ids, class_ids=class_ids, consultant_id=consultant_id)
+    query = query.order_by(Student.student_id.asc())
+    return query.offset(skip).limit(limit).all(), query.count()
+
+
 def get_student(db: Session, student_id=None, student_name=None, class_id=None, student_ids=None, class_ids=None, consultant_id=None):
     select_id = None
     select_name = None

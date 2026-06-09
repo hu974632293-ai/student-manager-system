@@ -12,6 +12,7 @@ from app.controllers.ai_chat import ai_chat_router
 from app.controllers.auth import auth_router, ensure_default_users
 from app.controllers.classes import class_router
 from app.controllers.data_query import data_query_router
+from app.controllers.dify_gateway import dify_gateway_router
 from app.controllers.jobs import router_job
 from app.controllers.letter import letter_router
 from app.controllers.logs import logs_router
@@ -134,6 +135,7 @@ app.include_router(logs_router)
 app.include_router(auth_router)
 app.include_router(weather_router)
 app.include_router(data_query_router)
+app.include_router(dify_gateway_router)
 app.include_router(statistics_router)
 app.include_router(teacher_router)
 app.include_router(router_job)

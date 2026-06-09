@@ -127,6 +127,25 @@ Default development accounts are created on startup when missing:
 
 The non-admin accounts are not bound to real teacher or student records by default. Set `users.teacher_id` and `users.student_id` to real IDs before validating scoped data access.
 
+## Dify Gateway
+
+Dify can call the backend through dedicated gateway APIs under `/dify-gateway/*`.
+
+Set these environment variables before enabling the gateway:
+
+```env
+DIFY_GATEWAY_API_KEY=replace-with-a-strong-random-secret
+DIFY_GATEWAY_USERNAME=admin
+```
+
+The gateway validates `X-Dify-Token` or `Authorization: Bearer <token>`, then maps the request to `DIFY_GATEWAY_USERNAME` and reuses the existing RBAC permission matrix and service-layer data scope filtering.
+
+First available tool:
+
+- `POST /dify-gateway/students/query`: query student records for Dify. Requires the mapped user to have `students:read`.
+
+See `docs/dify_gateway.md` for the request format and Dify configuration notes.
+
 ## AI Chat API
 
 `POST /ai/chat` creates or continues an AI chat session. Request body:
